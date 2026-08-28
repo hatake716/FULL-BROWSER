@@ -3,9 +3,13 @@
 このリポジトリの v0.1.0 は「設計 + 骨格 + 検証済みの部品」です。以下の順で仕上げてください。
 各 Phase の終わりに実機（Pixel 10a）で確認し、結果を `docs/BENCHMARKS.md` に残します。
 
-> **2026-08-28 更新**: Phase 0 と Phase 2 のアプリ結線（1〜3, 5）が完了。debug APK がビルドでき、
-> 実機で起動確認済み（rootfs 未公開のため SetupActivity が manifest 404 を表示するところまで）。
-> 残りは Phase 1（rootfs ビルドと `rootfs-latest` リリース公開）→ Phase 2-4（実機での展開耐性テスト）→ Phase 3 以降。
+> **2026-08-28 更新**: Phase 0・Phase 1・Phase 2（4 の耐性テストを除く）が完了。
+> 実機 (Pixel) で **セットアップ → Xorg → proot → Firefox ESR 全画面表示までの end-to-end を確認済み**
+> （docs/BENCHMARKS.md の動作確認ログ参照）。rootfs 4 バリアントは GitHub Release `rootfs-latest` に公開済み
+> （ローカル arm64 エミュレーションでビルド。CI の ARM ランナーはプライベートリポジトリの課金制限で未使用）。
+> **注意**: リポジトリがプライベートの間、端末は Release を匿名ダウンロードできない。
+> 開発時は `files/manifest-url.override` + `adb reverse` + ローカル HTTP を使う（RootfsManager 参照）。
+> 残りは Phase 2-4（展開の耐性テスト）→ Phase 3（導線と設定）→ Phase 4（Play 提出、リポジトリ公開化の判断込み）。
 
 ## 既に出来ていること
 
