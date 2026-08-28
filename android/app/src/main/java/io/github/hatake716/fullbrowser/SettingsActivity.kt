@@ -210,8 +210,9 @@ class SettingsActivity : ComponentActivity() {
             if (sessionBusy) {
                 Text(stringResource(R.string.settings_session_busy), style = MaterialTheme.typography.bodySmall)
             }
-            for (b in Browser.selectable) {
-                if (!rootfs.isInstalled(b.imageVariant)) continue
+            // 管理対象は「インストール済み」基準 (supported=false へ降格した variant も削除できるように)
+            for (b in Browser.entries) {
+                if (b.imageVariant.isEmpty() || !rootfs.isInstalled(b.imageVariant)) continue
                 Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(stringResource(b.labelRes), Modifier.weight(1f))
                     OutlinedButton(

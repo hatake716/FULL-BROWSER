@@ -13,7 +13,10 @@ enum class Browser(
     val needsOnDeviceInstall: Boolean,
 ) {
     FIREFOX("firefox", "firefox", R.string.browser_firefox, R.string.browser_firefox_desc, true, false),
-    CHROMIUM("chromium", "chromium", R.string.browser_chromium, R.string.browser_chromium_desc, true, false),
+    // 一時的に非対応: Debian 版 Chromium は proot 内の X11 表示初期化でハングする
+    // (ヘッドレスは動作、Chrome 公式は同条件で動作 → Debian ビルド固有。docs/HANDOVER.md 未検証 #4 参照)。
+    // 同エンジンの Google Chrome を案内する。rootfs 側で解決したら true に戻す
+    CHROMIUM("chromium", "chromium", R.string.browser_chromium, R.string.browser_chromium_desc, false, false),
     CHROME("chrome", "chromebase", R.string.browser_chrome, R.string.browser_chrome_desc, true, true),
     EDGE("edge", "", R.string.browser_edge, R.string.browser_edge_desc, false, false);
 

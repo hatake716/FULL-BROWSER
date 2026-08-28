@@ -8,7 +8,8 @@
 > （docs/BENCHMARKS.md の動作確認ログ参照）。rootfs 4 バリアントは GitHub Release `rootfs-latest` に公開済み
 > （ローカル arm64 エミュレーションでビルド。CI の ARM ランナーはプライベートリポジトリの課金制限で未使用）。
 > **注意**: リポジトリがプライベートの間、端末は Release を匿名ダウンロードできない。
-> 開発時は `files/manifest-url.override` + `adb reverse` + ローカル HTTP を使う（RootfsManager 参照）。
+> 開発時は `scripts/dev-serve.sh` を実行する（ローカル HTTP + adb reverse + override 設定を一括で行う）。
+> **adb reverse は USB 再接続のたびに消える**ので、「セットアップに失敗しました」が出たら再実行すること。
 > 残りは Phase 2-4（展開の耐性テスト）→ Phase 3（導線と設定）→ Phase 4（Play 提出、リポジトリ公開化の判断込み）。
 
 ## 既に出来ていること
@@ -79,7 +80,7 @@
 | 1 | targetSdk 35+ で jniLibs の `libproot.so` を `ProcessBuilder` で直接実行できるか（`extractNativeLibs`）。不可なら `/system/bin/linker64 <path>` 経由。LDFA-fix は同方式 (targetSdk 35) で動作実績あり | 起動不可 | Phase 1 の rootfs で初回セッション時 |
 | 2 | ~~app_process の CLASSPATH と SELinux~~ → **解消**: :x11 サービス + JNI ブリッジ方式に変更したため app_process は使わない (2026-08-28) | — | — |
 | 3 | Direct touch (touchMode=3) で Firefox/Chromium のタッチスクロールが効くか。効かなければ既定を 2 に | 操作性 | Phase 1 |
-| 4 | Debian trixie の Chromium が `--no-sandbox` 単独で起動するか（`chromium-sandbox` 不要のはず） | Chromium 起動不可 | Phase 1 |
+| 4 | ~~Debian trixie の Chromium が起動するか~~ → **問題確定 (2026-08-28)**: Debian Chromium 150 は X11 表示ありだと起動直後 (Variations 読込後・子プロセス生成前) に**プロセス間共有 futex (sem_wait/FUTEX_WAIT_BITSET, 匿名 rw ページ) で永久待ち**。`--headless=new --dump-dom` は**完全動作** (renderer 生成含む)。Chrome 公式 152 は同一 proot/X で動作 → Debian ビルド固有の表示初期化問題。試して無効: `--no-zygote` / `--in-process-gpu` / `--single-process` / `--use-angle=vulkan|swiftshader` / `CHROME_HEADLESS=1` / `NO_AT_BRIDGE=1 GTK_A11Y=none` / `PROOT_NO_SECCOMP=1` (crashpad の recvmsg ENOSYS は解消するが本体は待ちのまま。この recvmsg エラーは終了時のもので赤ニシン)。当面 Browser.CHROMIUM を supported=false にして UI から非表示。再挑戦の候補: chromium を sid/backports 版に / ungoogled-chromium / Debian パッチ差分の精査 | Chromium 提供不可 (Chrome で代替) | rootfs 改善時 |
 | 5 | Firefox ESR の sandbox 無効化 env が proot 内で十分か（`MOZ_DISABLE_*_SANDBOX`） | Firefox 起動不可 | Phase 1 |
 | 6 | `apt-get satisfy` で Chrome の Depends を trixie で解決できるか（t64 パッケージ名） | chromebase ビルド失敗 | CI |
 | 7 | Android 16/17 の Phantom Process Killer（32 プロセス制限）で Chromium のプロセスが殺されないか | 突然終了 | 長時間テスト。対策: renderer 数制限 |

@@ -156,7 +156,8 @@ class SetupActivity : ComponentActivity() {
     ) {
         Text(stringResource(R.string.setup_title), style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(16.dp))
-        for (b in Browser.entries) {
+        // 非対応ブラウザ (Edge: Linux ARM64 版が存在しない) は一覧に出さない
+        for (b in Browser.selectable) {
             val img = manifest.images[b.imageVariant]
             Row(
                 Modifier.fillMaxWidth().clickable(enabled = b.supported) { onSelect(b) }.padding(vertical = 8.dp),
