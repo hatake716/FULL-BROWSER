@@ -1,0 +1,23 @@
+#!/bin/bash
+# fb-install-chrome — Google Chrome (公式 ARM64 .deb) を端末上で取得して導入する。
+# Chrome は再配布できないので rootfs イメージには含めない。依存パッケージは chromebase イメージに導入済み。
+set -euo pipefail
+URL="${FB_CHROME_DEB_URL:-https://dl.google.com/linux/direct/google-chrome-stable_current_arm64.deb}"
+DEB="/tmp/google-chrome-stable_current_arm64.deb"
+
+if command -v google-chrome-stable >/dev/null; then
+  echo "Google Chrome は導入済みです: $(google-chrome-stable --version 2>/dev/null || true)"
+  exit 0
+fi
+echo ">> ダウンロード: $URL"
+wget -c --progress=dot:giga -O "$DEB" "$URL"
+echo ">> インストール"
+# 依存は導入済みのはず。足りない場合は apt で補う (要ネットワーク)。
+if ! dpkg -i "$DEB"; then
+  apt-get update && apt-get install -y --no-install-recommends -f
+fi
+rm -f "$DEB"
+# Chrome の postinst が登録する apt リポジトリは残す (fb-browser-update が使う)。cron は不要。
+rm -f /etc/cron.daily/google-chrome
+apt-get clean; rm -rf /var/lib/apt/lists/*
+echo ">> 完了: $(google-chrome-stable --version)"

@@ -1,0 +1,11 @@
+# FULL-BROWSER: 容量削減。ドキュメント・man・不要ロケールをインストールしない
+path-exclude=/usr/share/doc/*
+path-include=/usr/share/doc/*/copyright
+path-exclude=/usr/share/man/*
+path-exclude=/usr/share/info/*
+path-exclude=/usr/share/lintian/*
+path-exclude=/usr/share/locale/*
+path-include=/usr/share/locale/locale.alias
+path-include=/usr/share/locale/ja/*
+path-include=/usr/share/locale/en/*
+path-include=/usr/share/locale/en_US/*

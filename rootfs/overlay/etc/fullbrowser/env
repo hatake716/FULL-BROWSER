@@ -1,0 +1,7 @@
+# FULL-BROWSER 既定値。アプリは /root/.config/fullbrowser/env に同じ形式で上書きを書く。
+FB_SCALE=2.0        # 表示倍率 (Xft.dpi = 96 × FB_SCALE。Pixel 10a は 2.5 程度)
+FB_LOWMEM=1         # 1: 省メモリモード (プロセス数制限, GPU プロセスなし)
+FB_GPU=0            # 1: Chromium 系で GPU プロセスを許可 (WebGL 用。メモリ増)
+FB_LANG=ja          # Chromium 系の UI 言語
+FB_HOMEPAGE=        # 空なら各ブラウザの既定
+FB_EXTRA_FLAGS=     # 上級者向け: ブラウザへ追加するコマンドライン引数

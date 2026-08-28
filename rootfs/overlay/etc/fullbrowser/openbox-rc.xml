@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- FULL-BROWSER: openbox 設定。通常ウィンドウは装飾なしで常に最大化 (= 全画面)。
+     X 画面のサイズが変わる (端末の回転, ソフトキーボード表示時の Reseed) と再最大化される。 -->
+<openbox_config xmlns="http://openbox.org/3.4/rc" xmlns:xi="http://www.w3.org/2001/XInclude">
+  <resistance><strength>0</strength><screen_edge_strength>0</screen_edge_strength></resistance>
+  <focus>
+    <focusNew>yes</focusNew>
+    <followMouse>no</followMouse>
+    <focusLast>yes</focusLast>
+    <underMouse>no</underMouse>
+    <raiseOnFocus>yes</raiseOnFocus>
+  </focus>
+  <placement><policy>Smart</policy><center>yes</center><monitor>Primary</monitor></placement>
+  <theme>
+    <name>Clearlooks</name>
+    <titleLayout>LC</titleLayout>
+    <keepBorder>no</keepBorder>
+    <animateIconify>no</animateIconify>
+    <font place="ActiveWindow"><name>sans</name><size>9</size><weight>bold</weight><slant>normal</slant></font>
+    <font place="InactiveWindow"><name>sans</name><size>9</size><weight>normal</weight><slant>normal</slant></font>
+  </theme>
+  <desktops><number>1</number><firstdesk>1</firstdesk><names><name>1</name></names><popupTime>0</popupTime></desktops>
+  <resize><drawContents>yes</drawContents><popupShow>Never</popupShow></resize>
+  <margins><top>0</top><bottom>0</bottom><left>0</left><right>0</right></margins>
+  <keyboard><chainQuitKey>C-g</chainQuitKey></keyboard>
+  <mouse>
+    <dragThreshold>8</dragThreshold>
+    <doubleClickTime>300</doubleClickTime>
+    <screenEdgeWarpTime>0</screenEdgeWarpTime>
+    <context name="Client">
+      <mousebind button="Left" action="Press"><action name="Focus"/><action name="Raise"/></mousebind>
+      <mousebind button="Middle" action="Press"><action name="Focus"/><action name="Raise"/></mousebind>
+      <mousebind button="Right" action="Press"><action name="Focus"/><action name="Raise"/></mousebind>
+    </context>
+    <context name="Titlebar">
+      <mousebind button="Left" action="Press"><action name="Focus"/><action name="Raise"/></mousebind>
+      <mousebind button="Left" action="Drag"><action name="Move"/></mousebind>
+    </context>
+    <context name="Close">
+      <mousebind button="Left" action="Press"><action name="Focus"/><action name="Raise"/></mousebind>
+      <mousebind button="Left" action="Click"><action name="Close"/></mousebind>
+    </context>
+  </mouse>
+  <applications>
+    <!-- ブラウザ本体: タイトルバーなし、常に最大化 -->
+    <application type="normal">
+      <decor>no</decor>
+      <maximized>yes</maximized>
+      <focus>yes</focus>
+      <skip_pager>yes</skip_pager>
+      <skip_taskbar>yes</skip_taskbar>
+    </application>
+    <!-- ダイアログ (印刷, ファイル選択など): 装飾あり・中央・閉じるボタン付き -->
+    <application type="dialog">
+      <decor>yes</decor>
+      <focus>yes</focus>
+      <position force="no"><x>center</x><y>center</y></position>
+    </application>
+  </applications>
+</openbox_config>

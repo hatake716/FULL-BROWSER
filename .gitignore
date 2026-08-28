@@ -1,0 +1,15 @@
+out/
+*.tar.xz
+*.sha256
+*.extracted-bytes
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/app/src/main/jniLibs/
+android/app/src/main/assets/proot/
+external/
+.idea/
+*.iml
+__pycache__/
+*.pyc

@@ -1,0 +1,64 @@
+name: build-rootfs
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 3 * * 1"     # 毎週月曜 03:17 UTC (Debian のセキュリティ更新を取り込む)
+  push:
+    tags: ["rootfs-v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm    # ネイティブ ARM64。qemu 不要
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [base, firefox, chromium, chromebase]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends mmdebstrap xz-utils dpkg-dev curl python3
+      - name: Build ${{ matrix.variant }}
+        run: |
+          rootfs/build-rootfs.sh "${{ matrix.variant }}" out/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rootfs-${{ matrix.variant }}
+          path: out/
+          retention-days: 7
+
+  release:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: rootfs-*
+          path: out/
+          merge-multiple: true
+      - name: Make manifest
+        run: python3 rootfs/make-manifest.py out/
+      - name: Publish to release rootfs-latest (moving tag)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: rootfs-latest
+          name: rootfs (latest weekly build)
+          body: "自動ビルド。アプリは manifest.json の sha256 で検証してから展開します。"
+          files: |
+            out/*.tar.xz
+            out/*.sha256
+            out/manifest.json
+      - name: Also publish dated tag on manual/tag runs
+        if: startsWith(github.ref, 'refs/tags/rootfs-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            out/*.tar.xz
+            out/*.sha256
+            out/manifest.json

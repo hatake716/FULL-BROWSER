@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FULL-BROWSER</string>
+    <string name="shortcut_firefox">Open with Firefox</string>
+    <string name="shortcut_chromium">Open with Chromium</string>
+    <string name="shortcut_chrome">Open with Chrome</string>
+    <string name="shortcut_setup">Add browsers / Settings</string>
+
+    <string name="browser_firefox">Firefox ESR (recommended)</string>
+    <string name="browser_firefox_desc">Fastest startup and lowest memory.</string>
+    <string name="browser_chromium">Chromium</string>
+    <string name="browser_chromium_desc">Same engine as Chrome. No Google sync or Widevine DRM.</string>
+    <string name="browser_chrome">Google Chrome</string>
+    <string name="browser_chrome_desc">Official ARM64 build with sync and DRM. Downloaded from Google\'s servers (terms apply).</string>
+    <string name="browser_edge">Microsoft Edge</string>
+    <string name="browser_edge_desc">Not available: no Linux ARM64 build exists.</string>
+
+    <string name="setup_title">Choose a browser</string>
+    <string name="setup_size">Download about %1$s, about %2$s after extraction. Wi-Fi recommended.</string>
+    <string name="setup_install">Set up</string>
+    <string name="setup_downloading">Downloading… %1$d%%</string>
+    <string name="setup_verifying">Verifying…</string>
+    <string name="setup_extracting">Extracting… %1$d%%</string>
+    <string name="setup_chrome_fetch">Fetching Google Chrome…</string>
+    <string name="setup_done">Ready</string>
+    <string name="setup_launch">Launch</string>
+    <string name="setup_error">Setup failed: %1$s</string>
+    <string name="setup_retry">Retry</string>
+    <string name="setup_no_space">Not enough free space (needs %1$s)</string>
+    <string name="setup_chrome_terms">I accept the Google Chrome Terms of Service</string>
+    <string name="setup_manifest_loading">Fetching the latest image list…</string>
+
+    <string name="notif_channel">Browser session</string>
+    <string name="notif_running">%1$s is running</string>
+    <string name="notif_stop">Stop</string>
+
+    <string name="main_connecting">Starting the browser…</string>
+    <string name="main_hint">Back button: show/hide keyboard · Stop from the notification</string>
+    <string name="main_exited">Browser exited</string>
+</resources>

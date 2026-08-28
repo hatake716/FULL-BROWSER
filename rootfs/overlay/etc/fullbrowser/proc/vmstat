@@ -1,0 +1,11 @@
+nr_free_pages 1743136
+nr_zone_inactive_anon 179281
+nr_zone_active_anon 7183
+nr_zone_inactive_file 22858
+nr_zone_active_file 51328
+nr_zone_unevictable 642
+nr_anon_pages 128000
+nr_mapped 40000
+nr_file_pages 80000
+pgfault 1000000
+pgmajfault 1000

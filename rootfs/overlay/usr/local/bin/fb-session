@@ -1,0 +1,122 @@
+#!/bin/bash
+# fb-session — FULL-BROWSER ゲスト側セッション (proot のエントリポイント)
+#
+# 使い方: fb-session [firefox|chromium|chrome] [ブラウザに渡す追加引数...]
+# 前提:  DISPLAY (既定 :0) の X ソケットが /tmp/.X11-unix にあること。
+# 設定:  /etc/fullbrowser/env (既定値) → /root/.config/fullbrowser/env (アプリが書く上書き)
+# 終了:  ブラウザが終了したら openbox を止めて、ブラウザの終了コードで返る。
+set -u
+
+BROWSER="${1:-${FB_BROWSER:-}}"
+[ $# -gt 0 ] && shift
+: "${DISPLAY:=:0}"; export DISPLAY
+export HOME="${HOME:-/root}"
+STATE="$HOME/.fullbrowser"
+LOG="$STATE/session.log"
+mkdir -p "$STATE" "$HOME/Downloads" "$HOME/.config/fullbrowser" /tmp/.shm 2>/dev/null
+# ログはファイルと標準出力の両方へ (アプリ側は proot の stdout を logcat に流す)
+exec > >(tee -a "$LOG") 2>&1
+
+# --- 設定の読み込み -----------------------------------------------------------
+FB_SCALE=2.0; FB_LOWMEM=1; FB_GPU=0; FB_LANG=ja; FB_HOMEPAGE=""; FB_EXTRA_FLAGS=""
+# shellcheck source=/dev/null
+[ -r /etc/fullbrowser/env ] && . /etc/fullbrowser/env
+# shellcheck source=/dev/null
+[ -r "$HOME/.config/fullbrowser/env" ] && . "$HOME/.config/fullbrowser/env"
+
+if [ -z "$BROWSER" ]; then
+  # イメージ既定 (image-info の browser=) にフォールバック
+  BROWSER="$(sed -n 's/^browser=//p' /etc/fullbrowser/image-info 2>/dev/null | head -n1)"
+fi
+echo "== fb-session $(date -u +%FT%TZ) browser=$BROWSER display=$DISPLAY"
+case "$BROWSER" in
+  firefox|chromium|chrome) ;;
+  *) echo "fb-session: unknown browser '$BROWSER'" >&2; exit 64 ;;
+esac
+
+# --- X サーバ待ち -------------------------------------------------------------
+DNUM="${DISPLAY#:}"; DNUM="${DNUM%%.*}"
+SOCK="/tmp/.X11-unix/X$DNUM"
+for _ in $(seq 1 100); do
+  [ -S "$SOCK" ] && break
+  sleep 0.1
+done
+if [ ! -S "$SOCK" ]; then
+  echo "fb-session: X socket $SOCK not found (X サーバが起動していません)" >&2
+  exit 65
+fi
+
+# --- DPI (倍率) と背景 ----------------------------------------------------------
+DPI="$(awk -v s="$FB_SCALE" 'BEGIN { d = 96 * s; if (d < 72) d = 72; printf "%d", d }')"
+printf 'Xft.dpi: %s\nXft.antialias: 1\nXft.hinting: 1\nXft.rgba: none\n' "$DPI" | xrdb -merge - 2>/dev/null || true
+xsetroot -solid '#000000' 2>/dev/null || true
+
+# --- ウィンドウマネージャ (装飾なし・常時最大化) ------------------------------------
+openbox --config-file /etc/fullbrowser/openbox-rc.xml --sm-disable &
+WM_PID=$!
+
+cleanup() {
+  [ -n "${BROWSER_PID:-}" ] && kill "$BROWSER_PID" 2>/dev/null
+  kill "$WM_PID" 2>/dev/null
+}
+trap 'cleanup; exit 143' TERM INT
+
+# --- ブラウザ -------------------------------------------------------------------
+launch_firefox() {
+  local prof="$STATE/firefox"
+  mkdir -p "$prof"
+  {
+    cat /etc/fullbrowser/firefox-user.js
+    echo "user_pref(\"layout.css.devPixelsPerPx\", \"$FB_SCALE\");"
+    echo "user_pref(\"browser.download.dir\", \"$HOME/Downloads\");"
+    [ -n "$FB_HOMEPAGE" ] && echo "user_pref(\"browser.startup.homepage\", \"$FB_HOMEPAGE\");"
+    if [ "$FB_LOWMEM" = 1 ]; then
+      echo 'user_pref("dom.ipc.processCount", 2);'
+      echo 'user_pref("browser.tabs.unloadOnLowMemory", true);'
+    else
+      echo 'user_pref("dom.ipc.processCount", 4);'
+    fi
+  } > "$prof/user.js"
+  # proot 内では user namespace / seccomp サンドボックスが使えないので無効化する
+  export MOZ_USE_XINPUT2=1 MOZ_ENABLE_WAYLAND=0 \
+         MOZ_DISABLE_CONTENT_SANDBOX=1 MOZ_DISABLE_GMP_SANDBOX=1 MOZ_DISABLE_RDD_SANDBOX=1 \
+         MOZ_DISABLE_SOCKET_PROCESS_SANDBOX=1 MOZ_DISABLE_GPU_SANDBOX=1
+  # shellcheck disable=SC2086
+  firefox-esr --profile "$prof" $FB_EXTRA_FLAGS "$@" &
+  BROWSER_PID=$!
+}
+
+launch_chromium_like() {
+  local bin="$1" name="$2"; shift 2
+  local prof="$STATE/$name"
+  mkdir -p "$prof"
+  # shellcheck source=/etc/fullbrowser/chromium-flags.conf
+  . /etc/fullbrowser/chromium-flags.conf
+  local -a flags=("${FB_CHROMIUM_FLAGS_BASE[@]}")
+  flags+=("--force-device-scale-factor=$FB_SCALE" "--lang=$FB_LANG" "--user-data-dir=$prof")
+  [ "$FB_LOWMEM" = 1 ] && flags+=("${FB_CHROMIUM_FLAGS_LOWMEM[@]}")
+  [ "$FB_GPU" = 0 ] && flags+=("${FB_CHROMIUM_FLAGS_GPU_OFF[@]}")
+  # 引数で URL が渡されていなければホームページを開く
+  [ $# -eq 0 ] && [ -n "$FB_HOMEPAGE" ] && set -- "$FB_HOMEPAGE"
+  # shellcheck disable=SC2086
+  "$bin" "${flags[@]}" $FB_EXTRA_FLAGS "$@" &
+  BROWSER_PID=$!
+}
+
+case "$BROWSER" in
+  firefox)  launch_firefox "$@" ;;
+  chromium) launch_chromium_like chromium chromium "$@" ;;
+  chrome)
+    if ! command -v google-chrome-stable >/dev/null; then
+      echo "fb-session: Google Chrome が未インストールです。先に fb-install-chrome を実行してください" >&2
+      cleanup; exit 66
+    fi
+    launch_chromium_like google-chrome-stable chrome "$@" ;;
+esac
+echo "== browser pid $BROWSER_PID"
+
+wait "$BROWSER_PID"; RC=$?
+echo "== browser exited rc=$RC"
+kill "$WM_PID" 2>/dev/null
+wait "$WM_PID" 2>/dev/null
+exit "$RC"

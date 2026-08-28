@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- オリジナルの仮アイコン: 画面いっぱいのウィンドウ枠 + 地球儀風の円。他社ロゴは使わない -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#F2F5F9" android:pathData="M24,30 h60 a4,4 0 0 1 4,4 v44 a4,4 0 0 1 -4,4 h-60 a4,4 0 0 1 -4,-4 v-44 a4,4 0 0 1 4,-4 z" />
+    <path android:fillColor="#1B2430" android:pathData="M28,38 h52 v40 h-52 z" />
+    <path android:fillColor="#4FB3FF" android:pathData="M54,44 a14,14 0 1 0 0.01,0 z" />
+    <path android:fillColor="#1B2430" android:pathData="M54,44 c-4,4 -4,24 0,28 c4,-4 4,-24 0,-28 z M40,58 h28 v2 h-28 z" />
+</vector>

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FULL-BROWSER</string>
+    <string name="shortcut_firefox">Firefox で開く</string>
+    <string name="shortcut_chromium">Chromium で開く</string>
+    <string name="shortcut_chrome">Chrome で開く</string>
+    <string name="shortcut_setup">ブラウザの追加・設定</string>
+
+    <string name="browser_firefox">Firefox ESR（おすすめ）</string>
+    <string name="browser_firefox_desc">起動が最も速く、メモリも少なめ。日本語 UI 付き。</string>
+    <string name="browser_chromium">Chromium</string>
+    <string name="browser_chromium_desc">Chrome と同じエンジン。Google 同期と Netflix 等の DRM は非対応。</string>
+    <string name="browser_chrome">Google Chrome</string>
+    <string name="browser_chrome_desc">Google 公式 ARM64 版。同期・DRM 対応。本体は Google のサーバから取得します（利用規約への同意が必要）。</string>
+    <string name="browser_edge">Microsoft Edge</string>
+    <string name="browser_edge_desc">非対応: Linux ARM64 版が提供されていません。</string>
+
+    <string name="setup_title">ブラウザを選んでください</string>
+    <string name="setup_size">ダウンロード約 %1$s、展開後約 %2$s。Wi-Fi 推奨。</string>
+    <string name="setup_install">この内容でセットアップ</string>
+    <string name="setup_downloading">ダウンロード中… %1$d%%</string>
+    <string name="setup_verifying">検証中…</string>
+    <string name="setup_extracting">展開中… %1$d%%</string>
+    <string name="setup_chrome_fetch">Google Chrome を取得中…</string>
+    <string name="setup_done">準備ができました</string>
+    <string name="setup_launch">起動する</string>
+    <string name="setup_error">セットアップに失敗しました: %1$s</string>
+    <string name="setup_retry">やり直す</string>
+    <string name="setup_no_space">空き容量が足りません（必要: %1$s）</string>
+    <string name="setup_chrome_terms">Google Chrome の利用規約に同意する</string>
+    <string name="setup_manifest_loading">最新のイメージ情報を取得中…</string>
+
+    <string name="notif_channel">ブラウザセッション</string>
+    <string name="notif_running">%1$s を実行中</string>
+    <string name="notif_stop">終了</string>
+
+    <string name="main_connecting">ブラウザを起動しています…</string>
+    <string name="main_hint">戻るボタン: キーボード表示/非表示 ・ 通知の「終了」で閉じる</string>
+    <string name="main_exited">ブラウザを終了しました</string>
+</resources>

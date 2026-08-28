@@ -1,0 +1,16 @@
+#!/bin/bash
+# fb-browser-update — rootfs 内のブラウザを apt で更新する (設定画面の「ブラウザを更新」から呼ばれる)。
+set -euo pipefail
+BROWSER="${1:-$(sed -n 's/^browser=//p' /etc/fullbrowser/image-info 2>/dev/null | head -n1)}"
+case "$BROWSER" in
+  firefox)  PKGS="firefox-esr firefox-esr-l10n-ja" ;;
+  chromium) PKGS="chromium chromium-l10n" ;;
+  chrome)   PKGS="google-chrome-stable" ;;
+  *) echo "unknown browser: $BROWSER" >&2; exit 64 ;;
+esac
+export DEBIAN_FRONTEND=noninteractive
+apt-get update
+# shellcheck disable=SC2086
+apt-get install -y --no-install-recommends --only-upgrade $PKGS
+apt-get clean; rm -rf /var/lib/apt/lists/*
+echo "更新完了: $PKGS"
