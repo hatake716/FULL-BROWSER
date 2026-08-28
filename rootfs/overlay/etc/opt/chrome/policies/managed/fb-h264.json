@@ -1,0 +1,6 @@
+{
+  "_comment": "FULL-BROWSER: SW デコード前提のため h264ify を導入し YouTube 等に H.264 を配信させる (AV1/VP9 は 2〜3 倍重い)",
+  "ExtensionInstallForcelist": [
+    "aleakchihdccplidncghkekgioiakgal;https://clients2.google.com/service/update2/crx"
+  ]
+}

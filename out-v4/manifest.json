@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "suite": "trixie",
+  "arch": "arm64",
+  "build": "20260829",
+  "base_url": "https://github.com/hatake716/FULL-BROWSER/releases/download/rootfs-latest/",
+  "images": {
+    "base": {
+      "file": "fullbrowser-rootfs-base-arm64-20260829.tar.xz",
+      "sha256": "3163c77e9cb2854db0d6fa5bd2c933c8bd96ff5764993f2295a8d3f883a92a1b",
+      "size": 97517492,
+      "extracted": 404688472,
+      "browser": "none"
+    },
+    "chromebase": {
+      "file": "fullbrowser-rootfs-chromebase-arm64-20260829.tar.xz",
+      "sha256": "9461ffd74dbee10a0eeb895286184b336558dd9579a7709159e8b8effea426da",
+      "size": 148278076,
+      "extracted": 659099649,
+      "browser": "chrome"
+    },
+    "firefox": {
+      "file": "fullbrowser-rootfs-firefox-arm64-20260829.tar.xz",
+      "sha256": "1d5e29802a15fa4be2fca77e7b24803ee0bf74b1ee676862bf6b8776ab04a49c",
+      "size": 169059552,
+      "extracted": 712614884,
+      "browser": "firefox"
+    }
+  }
+}
