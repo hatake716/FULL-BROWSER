@@ -16,6 +16,7 @@
         android:allowBackup="false"
         android:extractNativeLibs="true"
         android:networkSecurityConfig="@xml/network_security"
+        android:enableOnBackInvokedCallback="false"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.DeviceDefault.NoActionBar"
         tools:ignore="MissingApplicationIcon,DataExtractionRules">

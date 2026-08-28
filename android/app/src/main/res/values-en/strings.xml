@@ -36,7 +36,7 @@
     <string name="notif_xserver">Display server is running</string>
 
     <string name="main_connecting">Starting the browser…</string>
-    <string name="main_hint">Back button: show/hide keyboard · Stop from the notification</string>
+    <string name="main_hint">Back: settings \u00b7 3-finger swipe up: keyboard \u00b7 Stop from the notification</string>
     <string name="main_exited">Browser exited</string>
     <string name="main_settings">Settings</string>
 
@@ -44,7 +44,7 @@
     <string name="cancel">Cancel</string>
 
     <string name="tutorial_title">How to use</string>
-    <string name="tutorial_body">\u2022 Back button: show/hide the keyboard\n\u2022 The browser keeps running when you go Home\n\u2022 To quit, tap "Stop" in the notification\n\u2022 Scale and touch mode: long-press the app icon \u2192 "Settings"</string>
+    <string name="tutorial_body">\u2022 Back button: open Settings\n\u2022 3-finger swipe up: show/hide the keyboard\n\u2022 The browser keeps running when you go Home\n\u2022 To quit, tap "Stop" in the notification</string>
     <string name="tutorial_ok">Get started</string>
 
     <string name="settings_title">Settings</string>

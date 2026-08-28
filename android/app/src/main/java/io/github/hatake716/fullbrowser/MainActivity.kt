@@ -37,6 +37,14 @@ class MainActivity : ComponentActivity() {
     private lateinit var rootfs: RootfsManager
     private lateinit var prefs: Prefs
 
+    /** 再表示のたびにビューアを前面に戻すためのトリガー (LaunchedEffect のキーに使う) */
+    private val resumeTick = kotlinx.coroutines.flow.MutableStateFlow(0)
+
+    override fun onResume() {
+        super.onResume()
+        resumeTick.value++
+    }
+
     private val notifPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,8 +72,10 @@ class MainActivity : ComponentActivity() {
             // Binder 注入はサービス bind 経由 (LDFA 方式)。Activity が前面のここから呼ぶことで
             // Android 10+ のバックグラウンド Activity 起動制限に掛からない。
             // 初回だけ先にチュートリアルを見せ、OK 後にビューアを開く。
-            // 1 本の LaunchedEffect に集約する (2 本に分けると openViewer が並行に走り二重起動する)
-            androidx.compose.runtime.LaunchedEffect(state, showTutorial) {
+            // 1 本の LaunchedEffect に集約する (2 本に分けると openViewer が並行に走り二重起動する)。
+            // resumeTick により「Running のまま MainActivity が再表示された」場合もビューアを前面へ戻す
+            val tick by resumeTick.collectAsState()
+            androidx.compose.runtime.LaunchedEffect(state, showTutorial, tick) {
                 if (state is SessionService.State.Running) {
                     applyLorieViewerPrefs()
                     if (!prefs.tutorialShown) {
@@ -131,6 +141,10 @@ class MainActivity : ComponentActivity() {
             .putBoolean("showAdditionalKbd", false)
             .putString("displayResolutionMode", "native")
             .putBoolean("clipboardEnable", true)
+            // 戻るボタン → 設定画面 ("open preferences" はパッチで SettingsActivity に差し替え済み)。
+            // 従来の戻る=キーボードは 3 本指の上スワイプに移設
+            .putString("backButtonAction", "open preferences")
+            .putString("swipeUpAction", "toggle soft keyboard")
             .apply()
     }
 

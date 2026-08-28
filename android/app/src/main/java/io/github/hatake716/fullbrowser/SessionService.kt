@@ -63,6 +63,7 @@ class SessionService : Service() {
                 // onNewIntent(新 intent) が連続すると同一ブラウザの開始が 2 連発になり、
                 // 起動途中の X サービスと競合して世代の握手が壊れる
                 val busy = proot?.process?.isAlive == true || _state.value is State.Starting
+                Log.i(App.TAG, "session: start req browser=${browser.id} force=$force busy=$busy current=${current?.id} epoch=$epoch")
                 if (busy && current == browser && !force) {
                     // 既に動いている/起動中: 前面に出すだけ (MainActivity 側)
                     return START_NOT_STICKY

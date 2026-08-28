@@ -56,24 +56,59 @@ class LorieXServerController(private val context: Context, override val display:
         return isPidAlive(state.pid) && isSocket(socket)
     }
 
+    /**
+     * @Synchronized: ブラウザ切替時は複数の runSession が並行に呼ぶため直列化する。
+     * さらに起動要求後は「自分の世代が状態ファイルに公開されたか」を検証し、
+     * 競合 (別世代のサーバが上がった/起動途中のサーバに intent を無視された) なら
+     * 相手を止めて再試行する。これで並行 start は必ず最後の要求に収束する。
+     */
+    @Synchronized
     override fun start(tmpDir: File, xkbConfigRoot: File) {
         this.tmpDir = tmpDir
         // 引き継ぎ (keepWarm) の条件は 3 点セットで検証する:
         //  1. 状態ファイルの tmpDir が今回の variant と一致 (X は前回 variant の tmp に束縛される)
         //  2. 記録された pid が生存 (ただし PID は再利用されるので 3 が本命)
         //  3. ソケットへ実際に connect できる (ファイルの存在は死んだサーバでも残る)
-        val state = serviceState()
-        val live = state != null && isPidAlive(state.pid)
-        if (live && state!!.tmpDir == tmpDir.absolutePath && isSocketLive(socketFile(tmpDir))) {
-            generation = state.generation
-            EmbeddedX11Display.restoreLaunchGeneration(state.generation)
-            Log.i(App.TAG, "xserver: adopting live server pid=${state.pid}")
+        val adopt = serviceState()
+        if (adopt != null && isPidAlive(adopt.pid) &&
+            adopt.tmpDir == tmpDir.absolutePath && isSocketLive(socketFile(tmpDir))
+        ) {
+            generation = adopt.generation
+            EmbeddedX11Display.restoreLaunchGeneration(adopt.generation)
+            Log.i(App.TAG, "xserver: adopting live server pid=${adopt.pid}")
             return
         }
-        // 古いサーバの停止。PID 再利用で無関係な自 uid プロセスを殺さないよう、
-        // /proc/<pid>/cmdline が ":x11" のときだけシグナルを送る (stopService は常に安全)
+        repeat(3) { attempt ->
+            stopCurrentServer()
+            // 死んだサーバの残骸 (ソケット/ロック/状態) を awaitSocket が
+            // 「起動済み」と誤認しないよう、サービス起動前にここ (アプリプロセス) で消す
+            runCatching { socketFile(tmpDir).delete() }
+            runCatching { File(tmpDir, ".X$display-lock").delete() }
+            runCatching { File(context.filesDir, XServerService.STATE_FILE).delete() }
+            val g = UUID.randomUUID().toString()
+            generation = g
+            Log.i(App.TAG, "xserver: fresh start gen=$g tmp=${tmpDir.absolutePath} attempt=$attempt")
+            val intent = Intent(context, XServerService::class.java).apply {
+                action = XServerService.ACTION_START
+                putExtra(XServerService.EXTRA_DISPLAY, display)
+                putExtra(XServerService.EXTRA_TMPDIR, tmpDir.absolutePath)
+                putExtra(XServerService.EXTRA_XKB_ROOT, xkbConfigRoot.absolutePath)
+                putExtra(XServerService.EXTRA_GENERATION, g)
+            }
+            ContextCompat.startForegroundService(context, intent)
+            if (awaitPublished(g, 5_000)) return
+            Log.w(App.TAG, "xserver: generation $g not published (attempt=$attempt), retrying")
+        }
+        Log.e(App.TAG, "xserver: could not obtain a server for ${tmpDir.absolutePath}")
+    }
+
+    /** 現在の X サービス/プロセスを止めて死亡を待つ */
+    private fun stopCurrentServer() {
         context.stopService(Intent(context, XServerService::class.java))
-        if (live && isX11Process(state!!.pid)) {
+        val state = serviceState() ?: return
+        if (!isPidAlive(state.pid)) return
+        // PID 再利用で無関係な自 uid プロセスを殺さないよう、:x11 と確認できたときだけシグナル
+        if (isX11Process(state.pid)) {
             Log.i(App.TAG, "xserver: stopping old server pid=${state.pid}")
             if (!awaitPidDead(state.pid, 3_000)) {
                 runCatching { Os.kill(state.pid, OsConstants.SIGTERM) }
@@ -83,21 +118,20 @@ class LorieXServerController(private val context: Context, override val display:
                 }
             }
         }
-        // 死んだサーバの残骸 (ソケット/ロック/状態) を awaitSocket が
-        // 「起動済み」と誤認しないよう、サービス起動前にここ (アプリプロセス) で消す
-        runCatching { socketFile(tmpDir).delete() }
-        runCatching { File(tmpDir, ".X$display-lock").delete() }
-        runCatching { File(context.filesDir, XServerService.STATE_FILE).delete() }
-        val g = UUID.randomUUID().toString()
-        generation = g
-        val intent = Intent(context, XServerService::class.java).apply {
-            action = XServerService.ACTION_START
-            putExtra(XServerService.EXTRA_DISPLAY, display)
-            putExtra(XServerService.EXTRA_TMPDIR, tmpDir.absolutePath)
-            putExtra(XServerService.EXTRA_XKB_ROOT, xkbConfigRoot.absolutePath)
-            putExtra(XServerService.EXTRA_GENERATION, g)
+    }
+
+    /** 状態ファイルに自分の世代が公開されるまで待つ。別世代が現れたら即 false (競合) */
+    private fun awaitPublished(g: String, timeoutMs: Long): Boolean {
+        val deadline = System.currentTimeMillis() + timeoutMs
+        while (System.currentTimeMillis() < deadline) {
+            val s = serviceState()
+            if (s != null) {
+                if (s.generation == g) return true
+                if (isPidAlive(s.pid)) return false   // 別世代のサーバが上がった (競合)
+            }
+            Thread.sleep(100)
         }
-        ContextCompat.startForegroundService(context, intent)
+        return serviceState()?.generation == g
     }
 
     override fun stop() {

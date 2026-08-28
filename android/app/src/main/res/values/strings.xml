@@ -36,7 +36,7 @@
     <string name="notif_xserver">画面表示サーバを実行中</string>
 
     <string name="main_connecting">ブラウザを起動しています…</string>
-    <string name="main_hint">戻るボタン: キーボード表示/非表示 ・ 通知の「終了」で閉じる</string>
+    <string name="main_hint">戻るボタン: 設定 ・ 3本指で上スワイプ: キーボード ・ 通知の「終了」で閉じる</string>
     <string name="main_exited">ブラウザを終了しました</string>
     <string name="main_settings">設定</string>
 
@@ -44,7 +44,7 @@
     <string name="cancel">キャンセル</string>
 
     <string name="tutorial_title">使い方</string>
-    <string name="tutorial_body">・戻るボタン: キーボードの表示/非表示\n・ホームに戻ってもブラウザは動き続けます\n・終了するには通知の「終了」を押します\n・倍率や操作方法は、アプリアイコン長押し →「設定」で変更できます</string>
+    <string name="tutorial_body">・戻るボタン: 設定画面を開く\n・3本指で上にスワイプ: キーボードの表示/非表示\n・ホームに戻ってもブラウザは動き続けます\n・終了するには通知の「終了」を押します</string>
     <string name="tutorial_ok">はじめる</string>
 
     <string name="settings_title">設定</string>

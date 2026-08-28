@@ -108,6 +108,12 @@ class SettingsActivity : ComponentActivity() {
                 Spacer(Modifier.height(8.dp))
                 Button(onClick = {
                     SessionService.restart(this@SettingsActivity, runningBrowser)
+                    // ビューアのタスクから開かれた場合もあるので、再接続を担う MainActivity を
+                    // 明示的に前面へ (Running 遷移で openViewer が走り、ビューアが再び前面に出る)
+                    startActivity(
+                        Intent(this@SettingsActivity, MainActivity::class.java)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    )
                     finish()
                 }) { Text(stringResource(R.string.settings_apply_restart)) }
             }

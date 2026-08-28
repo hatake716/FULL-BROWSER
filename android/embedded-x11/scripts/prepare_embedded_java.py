@@ -253,6 +253,34 @@ input_handler = replace_once(
 """,
     "input-device refresh singleton dereference",
 )
+# FULL-BROWSER: "open preferences" は lorie 自前の LoriePreferences ではなく
+# ホストアプリの設定画面 (SettingsActivity) を開く。戻るボタン (backButtonAction) と
+# 通知タップ (notificationTapAction) の両方がこの差し替えの対象になる。
+# ビューアの Activity コンテキストから NEW_TASK なしで起動するので、
+# 設定から戻るとブラウザに復帰する。
+input_handler = replace_once(
+    input_handler,
+    '            case "open preferences": return (key, down) -> { if (down) mActivity.startActivity(new Intent(mActivity, LoriePreferences.class) {{ setAction(Intent.ACTION_MAIN); }}); };\n',
+    '            case "open preferences": return (key, down) -> { if (down) mActivity.startActivity(new Intent().setClassName(mActivity.getPackageName(), "io.github.hatake716.fullbrowser.SettingsActivity")); };\n',
+    "FULL-BROWSER open-preferences user action redirect",
+)
+input_handler = replace_once(
+    input_handler,
+    """            case "open preferences":
+                return PendingIntent.getActivity(mActivity, requestCode, new Intent(mActivity, LoriePreferences.class) {{
+                    putExtra("key", "value");
+                    setPackage(mActivity.getPackageName());
+                    setAction(Intent.ACTION_MAIN);
+                }}, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+""",
+    """            case "open preferences":
+                return PendingIntent.getActivity(mActivity, requestCode, new Intent()
+                        .setClassName(mActivity.getPackageName(), "io.github.hatake716.fullbrowser.SettingsActivity")
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+""",
+    "FULL-BROWSER open-preferences notification redirect",
+)
 input_path.write_text(input_handler, encoding="utf-8")
 
 
