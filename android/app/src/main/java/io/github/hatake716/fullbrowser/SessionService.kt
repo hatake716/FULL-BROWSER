@@ -39,8 +39,10 @@ class SessionService : Service() {
     private lateinit var prefs: Prefs
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var proot: ProotRunner.Handle? = null
-    private var wakeLock: PowerManager.WakeLock? = null
     private var current: Browser? = null
+
+    /** セッション世代。ACTION_START/STOP のたびに進み、古い runSession の後始末を無効化する */
+    @Volatile private var epoch = 0
 
     override fun onCreate() {
         super.onCreate()
@@ -53,19 +55,23 @@ class SessionService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_STOP -> { stopSession(); stopSelf() }
+            ACTION_STOP -> { epoch++; stopSession(); stopSelf() }
             ACTION_START -> {
                 val browser = Browser.byId(intent.getStringExtra(EXTRA_BROWSER)) ?: return START_NOT_STICKY
+                val force = intent.getBooleanExtra(EXTRA_FORCE, false)
                 val running = proot?.process?.isAlive == true
-                if (running && current == browser) {
+                if (running && current == browser && !force) {
                     // 既に動いている: 前面に出すだけ (MainActivity 側)
                     return START_NOT_STICKY
                 }
+                // 旧セッションの runSession は epoch 不一致になり、後始末で新セッションを壊さない
+                epoch++
+                val myEpoch = epoch
                 if (running) stopSession()
                 current = browser
                 _state.value = State.Starting(browser)
                 startAsForeground(browser)
-                scope.launch { runSession(browser) }
+                scope.launch { runSession(browser, myEpoch) }
             }
         }
         return START_NOT_STICKY
@@ -98,8 +104,11 @@ class SessionService : Service() {
             .build()
     }
 
-    private suspend fun runSession(browser: Browser) {
+    private suspend fun runSession(browser: Browser, myEpoch: Int) {
         val variant = browser.imageVariant
+        val isCurrent = { myEpoch == epoch }
+        // wakelock はセッションローカルに所有する (メンバー共有だと切替時に旧セッション分がリークする)
+        var wl: PowerManager.WakeLock? = null
         try {
             rootfs.ensureRuntimeLibs()
             rootfs.prepareForSession(variant, prefs)
@@ -107,27 +116,34 @@ class SessionService : Service() {
             val guestTmp = rootfs.guestTmpDir(variant)
             xs.start(guestTmp, rootfs.xkbConfigRoot(variant))
             if (!xs.awaitSocket(guestTmp)) throw IllegalStateException("X server did not start")
+            if (!isCurrent()) return
 
-            acquireWakeLock()
+            wl = getSystemService(PowerManager::class.java)
+                .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "$packageName:session").apply { acquire() }
             val paths = rootfs.prootPaths(variant)
             val argv = ProotCommand.sessionArgv(paths, browser, TimeZone.getDefault().id, xs.display)
             val env = ProotCommand.environment(paths, prefs.noSeccomp)
             val h = ProotRunner.start(argv, env) { }
+            if (!isCurrent()) { h.process.destroy(); return }
             proot = h
             _state.value = State.Running(browser)
             val rc = h.process.waitFor()
-            Log.i(App.TAG, "session exited rc=$rc")
-            _state.value = State.Exited(browser, rc)
+            Log.i(App.TAG, "session exited rc=$rc (epoch=$myEpoch current=${isCurrent()})")
+            if (isCurrent()) _state.value = State.Exited(browser, rc)
         } catch (e: Exception) {
             Log.e(App.TAG, "session failed", e)
-            _state.value = State.Failed(e.message ?: e.toString())
+            if (isCurrent()) _state.value = State.Failed(e.message ?: e.toString())
         } finally {
-            proot = null
-            releaseWakeLock()
-            xserver?.closeViewer(this)   // ブラウザ終了 → ビューアを閉じて MainActivity に戻す
-            if (!prefs.keepWarm) xserver?.stop()
-            ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
-            stopSelf()
+            wl?.let { if (it.isHeld) it.release() }
+            // 新しいセッションに置き換えられた (epoch 不一致) 場合、共有状態と
+            // サービス自体には触れない。触ると新セッションを壊す
+            if (isCurrent()) {
+                proot = null
+                xserver?.closeViewer(this)   // ブラウザ終了 → ビューアを閉じて MainActivity に戻す
+                if (!prefs.keepWarm) xserver?.stop()
+                ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+                stopSelf()
+            }
         }
     }
 
@@ -136,19 +152,9 @@ class SessionService : Service() {
         proot = null
     }
 
-    private fun acquireWakeLock() {
-        val pm = getSystemService(PowerManager::class.java)
-        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "$packageName:session").apply { acquire() }
-    }
-
-    private fun releaseWakeLock() {
-        wakeLock?.let { if (it.isHeld) it.release() }
-        wakeLock = null
-    }
-
     override fun onDestroy() {
+        epoch++
         stopSession()
-        releaseWakeLock()
         scope.cancel()
         super.onDestroy()
     }
@@ -157,6 +163,7 @@ class SessionService : Service() {
         const val ACTION_START = "io.github.hatake716.fullbrowser.action.START"
         const val ACTION_STOP = "io.github.hatake716.fullbrowser.action.STOP"
         const val EXTRA_BROWSER = "browser"
+        const val EXTRA_FORCE = "force"
         private const val NOTIFICATION_ID = 1
 
         private val _state = MutableStateFlow<State>(State.Idle)
@@ -171,6 +178,14 @@ class SessionService : Service() {
         fun start(context: Context, browser: Browser) {
             context.startForegroundService(
                 Intent(context, SessionService::class.java).setAction(ACTION_START).putExtra(EXTRA_BROWSER, browser.id)
+            )
+        }
+
+        /** 設定変更を反映するため、同じブラウザでもセッションを作り直す */
+        fun restart(context: Context, browser: Browser) {
+            context.startForegroundService(
+                Intent(context, SessionService::class.java).setAction(ACTION_START)
+                    .putExtra(EXTRA_BROWSER, browser.id).putExtra(EXTRA_FORCE, true)
             )
         }
 

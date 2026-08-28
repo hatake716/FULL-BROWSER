@@ -64,11 +64,15 @@ class MainActivity : ComponentActivity() {
             // Binder 注入はサービス bind 経由 (LDFA 方式)。Activity が前面のここから呼ぶことで
             // Android 10+ のバックグラウンド Activity 起動制限に掛からない。
             // 初回だけ先にチュートリアルを見せ、OK 後にビューアを開く。
-            androidx.compose.runtime.LaunchedEffect(state) {
+            // 1 本の LaunchedEffect に集約する (2 本に分けると openViewer が並行に走り二重起動する)
+            androidx.compose.runtime.LaunchedEffect(state, showTutorial) {
                 if (state is SessionService.State.Running) {
                     applyLorieViewerPrefs()
-                    if (!prefs.tutorialShown) { showTutorial = true; return@LaunchedEffect }
-                    openViewerWithRetry()
+                    if (!prefs.tutorialShown) {
+                        showTutorial = true
+                    } else if (!showTutorial) {
+                        openViewerWithRetry()
+                    }
                 }
             }
             Box(Modifier.fillMaxSize().background(Color.Black)) {
@@ -91,12 +95,6 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             }
-            // チュートリアルを閉じたらビューアを開く
-            androidx.compose.runtime.LaunchedEffect(showTutorial, state) {
-                if (!showTutorial && prefs.tutorialShown && state is SessionService.State.Running) {
-                    openViewerWithRetry()
-                }
-            }
         }
     }
 
@@ -114,14 +112,16 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * lorie (ビューア) の設定を docs/ARCHITECTURE.md §4 の値で初期化する。
+     * lorie (ビューア) の設定を初期化する。
      * lorie はプロセス既定の SharedPreferences ("<pkg>_preferences") を読む。
      * touchMode は ListPreference なので文字列で書く。
+     * hideCutout=true は「カットアウト領域まで描画を広げる」(LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS) の意味。
+     * カメラ穴でタブバーが隠れないよう false (NEVER = ノッチ回避) にする。
      */
     private fun applyLorieViewerPrefs() {
         getSharedPreferences("${packageName}_preferences", MODE_PRIVATE).edit()
             .putBoolean("fullscreen", true)
-            .putBoolean("hideCutout", true)
+            .putBoolean("hideCutout", false)
             .putString("touchMode", prefs.touchMode.toString())
             .putBoolean("Reseed", true)
             .putBoolean("showAdditionalKbd", false)

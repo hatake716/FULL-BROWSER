@@ -58,15 +58,29 @@ class LorieXServerController(private val context: Context, override val display:
 
     override fun start(tmpDir: File, xkbConfigRoot: File) {
         this.tmpDir = tmpDir
-        // アプリプロセスだけが死んで :x11 が生きている場合は、その世代をそのまま引き継ぐ
+        // 生きている X サーバのソケットが「この variant の tmp」にあるときだけ引き継ぐ。
+        // keepWarm で残った X サーバは前回 variant の tmp に束縛されているため、
+        // ブラウザ切替 (firefox → chrome 等) では一度止めて新しい TMPDIR で立て直す。
         val state = serviceState()
-        if (state != null && isPidAlive(state.pid) && isSocket(socketFile(tmpDir))) {
-            generation = state.generation
+        val live = state != null && isPidAlive(state.pid)
+        if (live && isSocket(socketFile(tmpDir))) {
+            generation = state!!.generation
             EmbeddedX11Display.restoreLaunchGeneration(state.generation)
             Log.i(App.TAG, "xserver: adopting live server pid=${state.pid}")
             return
         }
-        // 前回の X サーバが死んでいる場合、残ったソケット/ロックを awaitSocket が
+        if (live) {
+            Log.i(App.TAG, "xserver: stopping old server pid=${state!!.pid} (tmpDir changed)")
+            context.stopService(Intent(context, XServerService::class.java))
+            if (!awaitPidDead(state.pid, 3_000)) {
+                runCatching { Os.kill(state.pid, OsConstants.SIGTERM) }
+                if (!awaitPidDead(state.pid, 2_000)) {
+                    runCatching { Os.kill(state.pid, OsConstants.SIGKILL) }
+                    awaitPidDead(state.pid, 2_000)
+                }
+            }
+        }
+        // 死んだサーバの残骸 (ソケット/ロック/状態) を awaitSocket が
         // 「起動済み」と誤認しないよう、サービス起動前にここ (アプリプロセス) で消す
         runCatching { socketFile(tmpDir).delete() }
         runCatching { File(tmpDir, ".X$display-lock").delete() }
@@ -150,4 +164,13 @@ class LorieXServerController(private val context: Context, override val display:
 
     private fun isPidAlive(pid: Int): Boolean =
         runCatching { Os.kill(pid, 0); true }.getOrDefault(false)
+
+    private fun awaitPidDead(pid: Int, timeoutMs: Long): Boolean {
+        val deadline = System.currentTimeMillis() + timeoutMs
+        while (System.currentTimeMillis() < deadline) {
+            if (!isPidAlive(pid)) return true
+            Thread.sleep(100)
+        }
+        return !isPidAlive(pid)
+    }
 }

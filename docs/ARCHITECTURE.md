@@ -103,7 +103,7 @@ LOAD セグメントのアライメントは 0x4000（16 KB ページ対応）�
 | 層 | 設定 | 理由 |
 |---|---|---|
 | Android | `WindowInsetsController` で immersive、cutout はコンテンツ外へ（`LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER`） | ノッチにタブバーが隠れない |
-| lorie | `fullscreen=true`, `hideCutout=true`, `touchMode=3`(Direct touch), `Reseed=true`, `showAdditionalKbd=false`, `displayResolutionMode=native`, `clipboardEnable=true` | Termux:X11 と同じ preference キー。Reseed=true でソフトキーボード表示時に X 画面が縮み、openbox が再最大化するので入力欄が隠れない |
+| lorie | `fullscreen=true`, `hideCutout=false`, `touchMode=3`(Direct touch), `Reseed=true`, `showAdditionalKbd=false`, `displayResolutionMode=native`, `clipboardEnable=true` | Termux:X11 と同じ preference キー。**注意: lorie の hideCutout=true は「カットアウト領域まで描画する」の意味** (LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS)。カメラ穴でタブバーが隠れるため false (NEVER = ノッチ回避) を使う。Reseed=true でソフトキーボード表示時に X 画面が縮み、openbox が再最大化するので入力欄が隠れない |
 | openbox | `type="normal"` は `<decor>no</decor><maximized>yes</maximized>`。dialog は装飾あり中央 | タイトルバーなしで常に画面いっぱい。回転で X 画面サイズが変わっても再最大化 |
 | DPI | `Xft.dpi = 96 × 倍率`（xrdb） + Chromium 系は `--force-device-scale-factor`、Firefox は `layout.css.devPixelsPerPx` | 既定倍率は `ro.sf.lcd_density / 160` を 0.25 刻みに丸め（Pixel 10a ≒ 2.5） |
 

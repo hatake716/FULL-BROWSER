@@ -102,6 +102,16 @@ class SettingsActivity : ComponentActivity() {
             Spacer(Modifier.height(8.dp))
             Text(stringResource(R.string.settings_note_next_session), style = MaterialTheme.typography.bodySmall)
 
+            // 実行中のセッションがあれば、その場で作り直して設定を反映できる
+            val runningBrowser = (sessionState as? SessionService.State.Running)?.browser
+            if (runningBrowser != null) {
+                Spacer(Modifier.height(8.dp))
+                Button(onClick = {
+                    SessionService.restart(this@SettingsActivity, runningBrowser)
+                    finish()
+                }) { Text(stringResource(R.string.settings_apply_restart)) }
+            }
+
             working?.let {
                 Spacer(Modifier.height(12.dp))
                 Text(it, style = MaterialTheme.typography.bodyMedium)
@@ -165,10 +175,10 @@ class SettingsActivity : ComponentActivity() {
                 1 to R.string.touch_trackpad,
             )) {
                 Row(
-                    Modifier.fillMaxWidth().clickable { touchMode = mode; prefs.touchMode = mode }.padding(vertical = 4.dp),
+                    Modifier.fillMaxWidth().clickable { touchMode = mode; prefs.touchMode = mode; applyTouchModeLive(mode) }.padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    RadioButton(selected = touchMode == mode, onClick = { touchMode = mode; prefs.touchMode = mode })
+                    RadioButton(selected = touchMode == mode, onClick = { touchMode = mode; prefs.touchMode = mode; applyTouchModeLive(mode) })
                     Text(stringResource(label))
                 }
             }
@@ -283,6 +293,21 @@ class SettingsActivity : ComponentActivity() {
             }
             Switch(checked = checked, onCheckedChange = onChange)
         }
+    }
+
+    /**
+     * タッチ方式は lorie (ビューア) 側の設定なので、実行中でも broadcast で即時反映できる。
+     * lorie はプロセス既定 SharedPreferences を読み、ACTION_PREFERENCES_CHANGED で再読込する。
+     */
+    private fun applyTouchModeLive(mode: Int) {
+        getSharedPreferences("${packageName}_preferences", MODE_PRIVATE)
+            .edit().putString("touchMode", mode.toString()).apply()
+        sendBroadcast(
+            Intent("com.termux.x11.ACTION_PREFERENCES_CHANGED")
+                .setPackage(packageName)
+                .putExtra("key", "touchMode")
+                .putExtra("fromBroadcast", true)
+        )
     }
 
     /** 各ブラウザの rootfs 内 /root/Downloads を SAF で選んだフォルダへコピーする。戻り値はコピーした数 */

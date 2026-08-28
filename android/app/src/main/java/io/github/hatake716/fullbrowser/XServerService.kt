@@ -62,6 +62,11 @@ class XServerService : Service() {
             stopSelf(startId)
             return START_NOT_STICKY
         }
+        if (serverStarted) {
+            // 起動済みサーバへの start は来ない設計 (引き継ぎは bind のみ)。古い Intent は無視する
+            Log.w(App.TAG, "xserver: ignoring start intent on live server")
+            return START_NOT_STICKY
+        }
         if (!serverStarted) {
             display = intent.getIntExtra(EXTRA_DISPLAY, 0)
             try {

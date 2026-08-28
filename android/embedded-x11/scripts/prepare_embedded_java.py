@@ -65,6 +65,37 @@ lorie = replace_once(
     "LorieView native ownership flag",
 )
 
+# FULL-BROWSER: Android 15+ (targetSdk 35+) enforces edge-to-edge and reinterprets
+# LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER as ALWAYS, so upstream's hideCutout=false can no
+# longer keep the X screen out of the camera cutout via window attributes.  Inset the
+# X frame by the cutout's safe insets instead; LorieView resizes and the X screen
+# follows (same mechanism as the soft-keyboard Reseed path).
+def patch_activity_cutout(activity: str) -> str:
+    return replace_once(
+        activity,
+        "        frm = findViewById(R.id.frame);\n",
+        """        frm = findViewById(R.id.frame);
+        frm.setOnApplyWindowInsetsListener((fbView, fbInsets) -> {
+            android.view.DisplayCutout fbCutout = fbInsets.getDisplayCutout();
+            boolean fbAvoid = !prefs.hideCutout.get() && fbCutout != null;
+            int fbLeft = fbAvoid ? fbCutout.getSafeInsetLeft() : 0;
+            int fbTop = fbAvoid ? fbCutout.getSafeInsetTop() : 0;
+            int fbRight = fbAvoid ? fbCutout.getSafeInsetRight() : 0;
+            int fbBottom = fbAvoid ? fbCutout.getSafeInsetBottom() : 0;
+            android.view.ViewGroup.MarginLayoutParams fbLp =
+                    (android.view.ViewGroup.MarginLayoutParams) fbView.getLayoutParams();
+            if (fbLp.leftMargin != fbLeft || fbLp.topMargin != fbTop
+                    || fbLp.rightMargin != fbRight || fbLp.bottomMargin != fbBottom) {
+                fbLp.setMargins(fbLeft, fbTop, fbRight, fbBottom);
+                fbView.setLayoutParams(fbLp);
+            }
+            return fbInsets;
+        });
+""",
+        "FULL-BROWSER cutout avoidance insets",
+    )
+
+
 # MainActivity is intentionally published only after onCreate() has initialized the
 # view, input handler and direct Binder transport.  Upstream captures the singleton in
 # an anonymous InputConnection field while LorieView is inflated, permanently storing
@@ -227,6 +258,7 @@ input_path.write_text(input_handler, encoding="utf-8")
 
 activity_path = output / "com" / "termux" / "x11" / "MainActivity.java"
 activity = activity_path.read_text(encoding="utf-8")
+activity = patch_activity_cutout(activity)
 activity = replace_once(
     activity,
     "import java.util.Map;\nimport java.util.Objects;\n",
@@ -282,12 +314,16 @@ activity = replace_once(
         prefs = new Prefs(this);
 """,
     """        super.onCreate(savedInstanceState);
+        // FULL-BROWSER: static prefs must be initialized even on the reject path.
+        // A system-restored viewer with a stale generation finishes early, and its
+        // lifecycle callbacks (onUserLeaveHint etc.) dereference prefs — a null
+        // there crashes the whole main process.
+        prefs = new Prefs(this);
         if (!EmbeddedX11Display.isLaunchIntentAllowed(getIntent())) {
             finish();
             return;
         }
 
-        prefs = new Prefs(this);
         // Cropping only the rendered viewport while an IME covers the Surface can
         // leave some Android GPU drivers presenting a black X11 frame.  Resize the
         // X screen to the visible area instead.  The one-time marker upgrades
