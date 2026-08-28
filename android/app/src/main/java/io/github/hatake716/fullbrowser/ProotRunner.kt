@@ -16,9 +16,15 @@ object ProotRunner {
         Log.i(App.TAG, "proot: ${argv.joinToString(" ")}")
         val p = pb.start()
         thread(name = "proot-log", isDaemon = true) {
-            p.inputStream.bufferedReader().forEachLine { line ->
-                Log.i(App.TAG, "guest: $line")
-                onLine(line)
+            // destroy() でストリームが乱暴に閉じられると read が IOException を投げる。
+            // 未捕捉だと既定ハンドラがアプリプロセスごと落とすので必ず握りつぶす
+            try {
+                p.inputStream.bufferedReader().forEachLine { line ->
+                    Log.i(App.TAG, "guest: $line")
+                    onLine(line)
+                }
+            } catch (e: java.io.IOException) {
+                Log.i(App.TAG, "guest log stream closed: $e")
             }
         }
         return Handle(p)

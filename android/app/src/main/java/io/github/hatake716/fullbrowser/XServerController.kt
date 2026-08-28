@@ -58,20 +58,23 @@ class LorieXServerController(private val context: Context, override val display:
 
     override fun start(tmpDir: File, xkbConfigRoot: File) {
         this.tmpDir = tmpDir
-        // 生きている X サーバのソケットが「この variant の tmp」にあるときだけ引き継ぐ。
-        // keepWarm で残った X サーバは前回 variant の tmp に束縛されているため、
-        // ブラウザ切替 (firefox → chrome 等) では一度止めて新しい TMPDIR で立て直す。
+        // 引き継ぎ (keepWarm) の条件は 3 点セットで検証する:
+        //  1. 状態ファイルの tmpDir が今回の variant と一致 (X は前回 variant の tmp に束縛される)
+        //  2. 記録された pid が生存 (ただし PID は再利用されるので 3 が本命)
+        //  3. ソケットへ実際に connect できる (ファイルの存在は死んだサーバでも残る)
         val state = serviceState()
         val live = state != null && isPidAlive(state.pid)
-        if (live && isSocket(socketFile(tmpDir))) {
-            generation = state!!.generation
+        if (live && state!!.tmpDir == tmpDir.absolutePath && isSocketLive(socketFile(tmpDir))) {
+            generation = state.generation
             EmbeddedX11Display.restoreLaunchGeneration(state.generation)
             Log.i(App.TAG, "xserver: adopting live server pid=${state.pid}")
             return
         }
-        if (live) {
-            Log.i(App.TAG, "xserver: stopping old server pid=${state!!.pid} (tmpDir changed)")
-            context.stopService(Intent(context, XServerService::class.java))
+        // 古いサーバの停止。PID 再利用で無関係な自 uid プロセスを殺さないよう、
+        // /proc/<pid>/cmdline が ":x11" のときだけシグナルを送る (stopService は常に安全)
+        context.stopService(Intent(context, XServerService::class.java))
+        if (live && isX11Process(state!!.pid)) {
+            Log.i(App.TAG, "xserver: stopping old server pid=${state.pid}")
             if (!awaitPidDead(state.pid, 3_000)) {
                 runCatching { Os.kill(state.pid, OsConstants.SIGTERM) }
                 if (!awaitPidDead(state.pid, 2_000)) {
@@ -108,11 +111,24 @@ class LorieXServerController(private val context: Context, override val display:
 
     /** サービスに bind して Binder をビューアへ注入する。準備未完なら false */
     override fun openViewer(context: Context): Boolean {
-        val expected = generation
+        var expected = generation
         if (expected == null) { Log.w(App.TAG, "openViewer: no generation"); return false }
         val state = serviceState()
         if (state == null) { Log.w(App.TAG, "openViewer: no service state file"); return false }
-        if (state.generation != expected) { Log.w(App.TAG, "openViewer: generation mismatch"); return false }
+        if (state.generation != expected) {
+            // 開始要求の競合などで世代がずれても、状態ファイルの X サーバが
+            // 「この variant の tmp を配信していて実際に接続できる」なら健全なので採用する
+            val t = tmpDir
+            if (t != null && state.tmpDir == t.absolutePath && isPidAlive(state.pid) && isSocketLive(socketFile(t))) {
+                Log.i(App.TAG, "openViewer: adopting live generation from state file")
+                generation = state.generation
+                EmbeddedX11Display.restoreLaunchGeneration(state.generation)
+                expected = state.generation
+            } else {
+                Log.w(App.TAG, "openViewer: generation mismatch")
+                return false
+            }
+        }
         if (!isPidAlive(state.pid)) { Log.w(App.TAG, "openViewer: server pid ${state.pid} dead"); return false }
         val appContext = context.applicationContext
         lateinit var connection: ServiceConnection
@@ -153,17 +169,31 @@ class LorieXServerController(private val context: Context, override val display:
         runCatching { EmbeddedX11Display.close(context.applicationContext) }
     }
 
-    private data class ServiceState(val pid: Int, val generation: String)
+    private data class ServiceState(val pid: Int, val generation: String, val tmpDir: String)
 
     private fun serviceState(): ServiceState? = runCatching {
         val lines = File(context.filesDir, XServerService.STATE_FILE).readLines()
         val pid = lines.getOrNull(0)?.trim()?.toIntOrNull() ?: return@runCatching null
         val g = lines.getOrNull(1)?.trim().orEmpty()
-        if (g.isBlank()) null else ServiceState(pid, g)
+        val t = lines.getOrNull(2)?.trim().orEmpty()
+        if (g.isBlank()) null else ServiceState(pid, g, t)
     }.getOrNull()
 
     private fun isPidAlive(pid: Int): Boolean =
         runCatching { Os.kill(pid, 0); true }.getOrDefault(false)
+
+    /** ソケットファイルの存在ではなく、実際に accept してもらえるかで生死を判定する */
+    private fun isSocketLive(f: File): Boolean = runCatching {
+        android.net.LocalSocket().use { s ->
+            s.connect(android.net.LocalSocketAddress(f.absolutePath, android.net.LocalSocketAddress.Namespace.FILESYSTEM))
+        }
+        true
+    }.getOrDefault(false)
+
+    /** PID 再利用対策: シグナルを送ってよいのは :x11 プロセスと確認できたときだけ */
+    private fun isX11Process(pid: Int): Boolean = runCatching {
+        File("/proc/$pid/cmdline").readText().trim { it == '\u0000' || it.isWhitespace() } == "${context.packageName}:x11"
+    }.getOrDefault(false)
 
     private fun awaitPidDead(pid: Int, timeoutMs: Long): Boolean {
         val deadline = System.currentTimeMillis() + timeoutMs

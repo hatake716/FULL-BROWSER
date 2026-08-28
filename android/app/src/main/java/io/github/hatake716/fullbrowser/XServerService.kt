@@ -70,7 +70,7 @@ class XServerService : Service() {
         if (!serverStarted) {
             display = intent.getIntExtra(EXTRA_DISPLAY, 0)
             try {
-                writeServiceState(generation)
+                writeServiceState(generation, tmpDir)
                 prepareEnvironment(File(tmpDir), File(xkbRoot))
                 // -noreset: 起動確認プローブ等の短命クライアント切断でソケット/ロックが
                 // 作り直され、ビューアの世代検証と競合するのを防ぐ (LDFA の知見)
@@ -147,10 +147,11 @@ class XServerService : Service() {
         if (stateOwner == Process.myPid()) runCatching { state.delete() }
     }
 
-    private fun writeServiceState(generation: String) {
+    private fun writeServiceState(generation: String, tmpDir: String) {
         val state = File(filesDir, STATE_FILE)
         val tmp = File(filesDir, ".$STATE_FILE.${Process.myPid()}")
-        tmp.writeText("${Process.myPid()}\n$generation\n")
+        // 3 行目の tmpDir は引き継ぎ判定用: どの variant の tmp を配信しているかを示す
+        tmp.writeText("${Process.myPid()}\n$generation\n$tmpDir\n")
         if (!tmp.renameTo(state)) {
             tmp.delete()
             error("could not publish x11 service state")

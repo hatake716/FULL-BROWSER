@@ -101,11 +101,15 @@ class MainActivity : ComponentActivity() {
     /**
      * ビューアが開くまで数回リトライする。bind 直後の :x11 サービス公開待ちなどの
      * 一時的な失敗 (openViewer=false や接続前の取りこぼし) をここで吸収する。
+     *
+     * 重要: 「ビューアの Activity が生きている」だけでは不十分なので必ず openViewer を呼ぶ。
+     * 既存ビューアには Binder を再注入して前面に出す (セッション再作成後の再接続と、
+     * MainActivity が前面に来てしまい黒画面のままになる問題の両方を防ぐ)。
      */
     private suspend fun openViewerWithRetry() {
         val c = SessionService.controller() ?: return
-        repeat(12) {
-            if (c.viewerOpen()) return
+        repeat(12) { attempt ->
+            if (attempt > 0 && c.viewerOpen()) return
             c.openViewer(this)
             kotlinx.coroutines.delay(500)
         }

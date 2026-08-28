@@ -59,15 +59,18 @@ class SessionService : Service() {
             ACTION_START -> {
                 val browser = Browser.byId(intent.getStringExtra(EXTRA_BROWSER)) ?: return START_NOT_STICKY
                 val force = intent.getBooleanExtra(EXTRA_FORCE, false)
-                val running = proot?.process?.isAlive == true
-                if (running && current == browser && !force) {
-                    // 既に動いている: 前面に出すだけ (MainActivity 側)
+                // Starting も「使用中」扱いにする: タスク復元で onCreate(旧 intent) と
+                // onNewIntent(新 intent) が連続すると同一ブラウザの開始が 2 連発になり、
+                // 起動途中の X サービスと競合して世代の握手が壊れる
+                val busy = proot?.process?.isAlive == true || _state.value is State.Starting
+                if (busy && current == browser && !force) {
+                    // 既に動いている/起動中: 前面に出すだけ (MainActivity 側)
                     return START_NOT_STICKY
                 }
                 // 旧セッションの runSession は epoch 不一致になり、後始末で新セッションを壊さない
                 epoch++
                 val myEpoch = epoch
-                if (running) stopSession()
+                if (busy) stopSession()
                 current = browser
                 _state.value = State.Starting(browser)
                 startAsForeground(browser)
