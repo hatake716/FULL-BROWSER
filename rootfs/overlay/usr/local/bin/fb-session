@@ -52,6 +52,13 @@ fi
 printf 'Xft.dpi: 96\nXft.antialias: 1\nXft.hinting: 1\nXft.rgba: none\n' | xrdb -merge - 2>/dev/null || true
 xsetroot -solid '#000000' 2>/dev/null || true
 
+# --- IME ブリッジ (テキスト欄タップでソフトキーボード表示) --------------------------
+# GTK の IM モジュール im-fb がフォーカス in/out を /tmp/.fb-ime へ書き、
+# Android 側が inotify で監視してキーボードを表示/非表示する
+if [ -r /usr/local/lib/fb-im/im-fb.so ]; then
+  export GTK_IM_MODULE=fb GTK_IM_MODULE_FILE=/etc/fullbrowser/immodules.cache
+fi
+
 # --- ウィンドウマネージャ (装飾なし・常時最大化) ------------------------------------
 openbox --config-file /etc/fullbrowser/openbox-rc.xml --sm-disable &
 WM_PID=$!

@@ -60,6 +60,9 @@ mmdebstrap \
   --customize-hook="sync-in $HERE/overlay /" \
   --customize-hook='mkdir -p "$1/system/fonts" "$1/tmp/.shm" "$1/root/.fullbrowser" "$1/root/Downloads" "$1/root/.config/fullbrowser"' \
   --customize-hook='chmod 755 "$1"/usr/local/bin/fb-*' \
+  --customize-hook='mkdir -p "$1/usr/local/lib/fb-im"' \
+  --customize-hook="copy-in $HERE/im-fb/im-fb-arm64.so /usr/local/lib/fb-im/" \
+  --customize-hook='mv "$1/usr/local/lib/fb-im/im-fb-arm64.so" "$1/usr/local/lib/fb-im/im-fb.so"' \
   --customize-hook='chroot "$1" fc-cache -f >/dev/null 2>&1 || true' \
   ${FB_HOOKS[@]+"${FB_HOOKS[@]}"} \
   --customize-hook="printf 'variant=%s\nbrowser=%s\nsuite=%s\nbuild=%s\n' '$VARIANT' '$FB_BROWSER_ID' '$SUITE' '$BUILD_DATE' > \"\$1/etc/fullbrowser/image-info\"" \
