@@ -92,7 +92,7 @@ object ProotCommand {
             "LANGUAGE" to "ja",
             "PATH" to GUEST_PATH,
             "TMPDIR" to "/tmp",
-            "PULSE_SERVER" to "127.0.0.1",
+            "PULSE_SERVER" to "unix:/tmp/.fb-pulse",   // fb-session が起動するゲスト内 PulseAudio
         )
         env.putAll(guestEnv)
         env.forEach { (k, v) -> a += "$k=$v" }

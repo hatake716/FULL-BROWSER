@@ -32,7 +32,7 @@ WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
 # 共通パッケージ (最小): WM, フォント基盤, XKB データ (X サーバの xkbcomp 用), xrdb/xsetroot, 証明書, TZ, ps
-BASE_PKGS="openbox fontconfig fonts-dejavu-core xkb-data x11-xserver-utils ca-certificates tzdata procps"
+BASE_PKGS="openbox fontconfig fonts-dejavu-core xkb-data x11-xserver-utils ca-certificates tzdata procps pulseaudio"
 
 # バリアント定義を読む (FB_PKGS / FB_BROWSER_ID / fb_prepare / FB_HOOKS)
 FB_PKGS=""; FB_BROWSER_ID=""; FB_HOOKS=()

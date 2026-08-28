@@ -42,6 +42,7 @@ class SessionService : Service() {
     private var proot: ProotRunner.Handle? = null
     private var current: Browser? = null
     private var imeBridge: com.termux.x11.LorieImeBridge? = null
+    private var audioBridge: AudioBridge? = null
 
     /** セッション世代。ACTION_START/STOP のたびに進み、古い runSession の後始末を無効化する */
     @Volatile private var epoch = 0
@@ -144,6 +145,9 @@ class SessionService : Service() {
             // テキスト欄タップで IME を自動表示 (ゲストの im-fb モジュール → /tmp/.fb-ime → ここ)
             imeBridge?.stop()
             imeBridge = com.termux.x11.LorieImeBridge(File(rootfs.guestTmpDir(variant), ".fb-ime")).also { it.start() }
+            // 音声: ゲスト PA の pipe-sink FIFO を AudioTrack へ
+            audioBridge?.stop()
+            audioBridge = AudioBridge(File(rootfs.guestTmpDir(variant), ".fb-audio")).also { it.start() }
             _state.value = State.Running(browser)
             val rc = h.process.waitFor()
             Log.i(App.TAG, "session exited rc=$rc (epoch=$myEpoch current=${isCurrent()})")
@@ -158,6 +162,7 @@ class SessionService : Service() {
             if (isCurrent()) {
                 proot = null
                 imeBridge?.stop(); imeBridge = null
+                audioBridge?.stop(); audioBridge = null
                 xserver?.closeViewer(this)   // ブラウザ終了 → ビューアを閉じて MainActivity に戻す
                 if (!prefs.keepWarm) xserver?.stop()
                 ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
@@ -174,6 +179,7 @@ class SessionService : Service() {
     override fun onDestroy() {
         epoch++
         imeBridge?.stop(); imeBridge = null
+        audioBridge?.stop(); audioBridge = null
         stopSession()
         scope.cancel()
         super.onDestroy()

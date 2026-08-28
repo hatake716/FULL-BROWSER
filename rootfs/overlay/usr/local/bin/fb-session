@@ -59,6 +59,23 @@ if [ -r /usr/local/lib/fb-im/im-fb.so ]; then
   export GTK_IM_MODULE=fb GTK_IM_MODULE_FILE=/etc/fullbrowser/immodules.cache
 fi
 
+# --- 音声 (PulseAudio → pipe-sink → Android 側 AudioTrack) ----------------------
+# ブラウザは通常の PulseAudio クライアントとして動く。PA は生 PCM (s16le 48kHz 2ch)
+# を FIFO /tmp/.fb-audio へ書き、Android 側 (AudioBridge) がそれを読んで再生する
+PA_PID=""
+if command -v pulseaudio >/dev/null; then
+  rm -f /tmp/.fb-audio /tmp/.fb-pulse
+  export PULSE_RUNTIME_PATH=/tmp/.fb-pa
+  mkdir -p "$PULSE_RUNTIME_PATH"
+  pulseaudio -n --daemonize=no --exit-idle-time=-1 --disable-shm=true \
+    --load="module-pipe-sink file=/tmp/.fb-audio sink_name=fb format=s16le rate=48000 channels=2" \
+    --load="module-native-protocol-unix socket=/tmp/.fb-pulse auth-anonymous=1" \
+    --load="module-always-sink" \
+    >/dev/null 2>&1 &
+  PA_PID=$!
+  export PULSE_SERVER=unix:/tmp/.fb-pulse
+fi
+
 # --- ウィンドウマネージャ (装飾なし・常時最大化) ------------------------------------
 openbox --config-file /etc/fullbrowser/openbox-rc.xml --sm-disable &
 WM_PID=$!
@@ -66,6 +83,7 @@ WM_PID=$!
 cleanup() {
   [ -n "${BROWSER_PID:-}" ] && kill "$BROWSER_PID" 2>/dev/null
   kill "$WM_PID" 2>/dev/null
+  [ -n "$PA_PID" ] && kill "$PA_PID" 2>/dev/null
 }
 trap 'cleanup; exit 143' TERM INT
 
@@ -126,5 +144,6 @@ echo "== browser pid $BROWSER_PID"
 wait "$BROWSER_PID"; RC=$?
 echo "== browser exited rc=$RC"
 kill "$WM_PID" 2>/dev/null
+[ -n "$PA_PID" ] && kill "$PA_PID" 2>/dev/null
 wait "$WM_PID" 2>/dev/null
 exit "$RC"

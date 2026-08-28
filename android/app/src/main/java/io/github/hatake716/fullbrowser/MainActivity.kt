@@ -139,7 +139,10 @@ class MainActivity : ComponentActivity() {
             .putString("touchMode", prefs.touchMode.toString())
             .putBoolean("Reseed", true)
             .putBoolean("showAdditionalKbd", false)
-            .putString("displayResolutionMode", "native")
+            // 描画解像度: 1.0 なら等倍。下げる場合は lorie の scaled モードで X 画面自体を
+            // 縮めて描画負荷を減らし、拡大表示させる (見かけの大きさは FB_SCALE 側で補正済み)
+            .putString("displayResolutionMode", if (prefs.renderRes >= 0.999f) "native" else "scaled")
+            .putInt("displayScale", Math.round(100f / prefs.renderRes))
             .putBoolean("clipboardEnable", true)
             // 戻るボタン → 設定画面 ("open preferences" はパッチで SettingsActivity に差し替え済み)。
             // キーボードは通知の「キーボード」ボタン (ACTION_CUSTOM what=swipeUp) と 3 本指上スワイプ

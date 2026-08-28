@@ -84,4 +84,9 @@
     <string name="settings_exporting">Exporting\u2026</string>
     <string name="settings_export_done">Exported %1$d file(s)</string>
     <string name="settings_apply_restart">Apply changes (restart browser)</string>
+    <string name="settings_render_res">Rendering resolution (performance)</string>
+    <string name="settings_render_res_desc">Lower is faster (slightly blurrier text). Apply via restart.</string>
+    <string name="render_res_full">Quality (100%)</string>
+    <string name="render_res_balanced">Balanced (75%)</string>
+    <string name="render_res_fast">Fast (50%)</string>
 </resources>

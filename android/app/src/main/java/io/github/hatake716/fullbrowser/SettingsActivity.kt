@@ -173,6 +173,24 @@ class SettingsActivity : ComponentActivity() {
                 )
             }
 
+            // ---- 描画解像度 (パフォーマンス) -------------------------------------
+            SectionTitle(R.string.settings_render_res)
+            Text(stringResource(R.string.settings_render_res_desc), style = MaterialTheme.typography.bodySmall)
+            var renderRes by remember { mutableStateOf(prefs.renderRes) }
+            for ((v, label) in listOf(
+                1.0f to R.string.render_res_full,
+                0.75f to R.string.render_res_balanced,
+                0.5f to R.string.render_res_fast,
+            )) {
+                Row(
+                    Modifier.fillMaxWidth().clickable { renderRes = v; prefs.renderRes = v }.padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RadioButton(selected = renderRes == v, onClick = { renderRes = v; prefs.renderRes = v })
+                    Text(stringResource(label))
+                }
+            }
+
             // ---- タッチ操作 -----------------------------------------------------
             SectionTitle(R.string.settings_touch)
             for ((mode, label) in listOf(
