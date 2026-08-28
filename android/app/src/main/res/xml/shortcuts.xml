@@ -1,30 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- アイコン長押しメニュー。インストール済みブラウザだけを出す動的更新は Phase 3 (ShortcutManager) -->
+<!-- アイコン長押しメニュー。ブラウザ別ショートカットは Shortcuts.kt が
+     インストール済みのものだけを動的に登録する (Phase 3-3)。静的には追加と設定のみ。 -->
 <shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
-    <shortcut android:shortcutId="firefox" android:enabled="true" android:icon="@mipmap/ic_launcher"
-        android:shortcutShortLabel="@string/shortcut_firefox" android:shortcutLongLabel="@string/shortcut_firefox">
-        <intent android:action="io.github.hatake716.fullbrowser.LAUNCH" android:targetPackage="io.github.hatake716.fullbrowser"
-            android:targetClass="io.github.hatake716.fullbrowser.MainActivity">
-            <extra android:name="browser" android:value="firefox" />
-        </intent>
-    </shortcut>
-    <shortcut android:shortcutId="chromium" android:enabled="true" android:icon="@mipmap/ic_launcher"
-        android:shortcutShortLabel="@string/shortcut_chromium" android:shortcutLongLabel="@string/shortcut_chromium">
-        <intent android:action="io.github.hatake716.fullbrowser.LAUNCH" android:targetPackage="io.github.hatake716.fullbrowser"
-            android:targetClass="io.github.hatake716.fullbrowser.MainActivity">
-            <extra android:name="browser" android:value="chromium" />
-        </intent>
-    </shortcut>
-    <shortcut android:shortcutId="chrome" android:enabled="true" android:icon="@mipmap/ic_launcher"
-        android:shortcutShortLabel="@string/shortcut_chrome" android:shortcutLongLabel="@string/shortcut_chrome">
-        <intent android:action="io.github.hatake716.fullbrowser.LAUNCH" android:targetPackage="io.github.hatake716.fullbrowser"
-            android:targetClass="io.github.hatake716.fullbrowser.MainActivity">
-            <extra android:name="browser" android:value="chrome" />
-        </intent>
-    </shortcut>
     <shortcut android:shortcutId="setup" android:enabled="true" android:icon="@mipmap/ic_launcher"
         android:shortcutShortLabel="@string/shortcut_setup" android:shortcutLongLabel="@string/shortcut_setup">
         <intent android:action="android.intent.action.MAIN" android:targetPackage="io.github.hatake716.fullbrowser"
             android:targetClass="io.github.hatake716.fullbrowser.SetupActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="settings" android:enabled="true" android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_settings" android:shortcutLongLabel="@string/shortcut_settings">
+        <intent android:action="android.intent.action.MAIN" android:targetPackage="io.github.hatake716.fullbrowser"
+            android:targetClass="io.github.hatake716.fullbrowser.SettingsActivity" />
     </shortcut>
 </shortcuts>

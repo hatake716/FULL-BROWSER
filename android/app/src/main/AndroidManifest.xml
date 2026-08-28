@@ -35,6 +35,7 @@
         </activity>
 
         <activity android:name=".SetupActivity" android:exported="false" />
+        <activity android:name=".SettingsActivity" android:exported="false" />
 
         <!-- ブラウザセッション維持 (docs/PLAY-COMPLIANCE.md: specialUse の申告が必要) -->
         <service

@@ -19,6 +19,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -53,20 +54,62 @@ class MainActivity : ComponentActivity() {
         requestNotificationPermissionIfNeeded()
         SessionService.start(this, browser)
 
+        Shortcuts.update(this, rootfs)
+
         setContent {
             val state by SessionService.state.collectAsState()
+            var showTutorial by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+
             // Running になったらビューア (com.termux.x11.MainActivity + LorieView) を前面に出す。
             // Binder 注入はサービス bind 経由 (LDFA 方式)。Activity が前面のここから呼ぶことで
             // Android 10+ のバックグラウンド Activity 起動制限に掛からない。
+            // 初回だけ先にチュートリアルを見せ、OK 後にビューアを開く。
             androidx.compose.runtime.LaunchedEffect(state) {
                 if (state is SessionService.State.Running) {
                     applyLorieViewerPrefs()
-                    SessionService.controller()?.openViewer(this@MainActivity)
+                    if (!prefs.tutorialShown) { showTutorial = true; return@LaunchedEffect }
+                    openViewerWithRetry()
                 }
             }
             Box(Modifier.fillMaxSize().background(Color.Black)) {
-                StatusOverlay(state, onRestart = { SessionService.start(this@MainActivity, browser) })
+                StatusOverlay(
+                    state,
+                    onRestart = { SessionService.start(this@MainActivity, browser) },
+                    onSettings = { startActivity(Intent(this@MainActivity, SettingsActivity::class.java)) },
+                )
+                if (showTutorial) {
+                    androidx.compose.material3.AlertDialog(
+                        onDismissRequest = { },
+                        title = { Text(stringResource(R.string.tutorial_title)) },
+                        text = { Text(stringResource(R.string.tutorial_body)) },
+                        confirmButton = {
+                            androidx.compose.material3.TextButton(onClick = {
+                                prefs.tutorialShown = true
+                                showTutorial = false
+                            }) { Text(stringResource(R.string.tutorial_ok)) }
+                        },
+                    )
+                }
             }
+            // チュートリアルを閉じたらビューアを開く
+            androidx.compose.runtime.LaunchedEffect(showTutorial, state) {
+                if (!showTutorial && prefs.tutorialShown && state is SessionService.State.Running) {
+                    openViewerWithRetry()
+                }
+            }
+        }
+    }
+
+    /**
+     * ビューアが開くまで数回リトライする。bind 直後の :x11 サービス公開待ちなどの
+     * 一時的な失敗 (openViewer=false や接続前の取りこぼし) をここで吸収する。
+     */
+    private suspend fun openViewerWithRetry() {
+        val c = SessionService.controller() ?: return
+        repeat(12) {
+            if (c.viewerOpen()) return
+            c.openViewer(this)
+            kotlinx.coroutines.delay(500)
         }
     }
 
@@ -118,7 +161,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @androidx.compose.runtime.Composable
-private fun StatusOverlay(state: SessionService.State, onRestart: () -> Unit) {
+private fun StatusOverlay(state: SessionService.State, onRestart: () -> Unit, onSettings: () -> Unit) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             when (state) {
@@ -127,14 +170,20 @@ private fun StatusOverlay(state: SessionService.State, onRestart: () -> Unit) {
                     Text(stringResource(R.string.main_connecting), color = Color.White, modifier = Modifier.padding(top = 16.dp))
                     Text(stringResource(R.string.main_hint), color = Color.Gray, modifier = Modifier.padding(top = 8.dp))
                 }
-                is SessionService.State.Running -> { /* LorieView が前面。何も描かない */ }
+                is SessionService.State.Running -> { /* LorieView (ビューア Activity) が前面。何も描かない */ }
                 is SessionService.State.Exited -> {
                     Text(stringResource(R.string.main_exited), color = Color.White)
                     Button(onClick = onRestart, modifier = Modifier.padding(top = 16.dp)) { Text(stringResource(R.string.setup_launch)) }
+                    androidx.compose.material3.OutlinedButton(onClick = onSettings, modifier = Modifier.padding(top = 8.dp)) {
+                        Text(stringResource(R.string.main_settings), color = Color.White)
+                    }
                 }
                 is SessionService.State.Failed -> {
                     Text(stringResource(R.string.setup_error, state.message), color = Color.White)
                     Button(onClick = onRestart, modifier = Modifier.padding(top = 16.dp)) { Text(stringResource(R.string.setup_retry)) }
+                    androidx.compose.material3.OutlinedButton(onClick = onSettings, modifier = Modifier.padding(top = 8.dp)) {
+                        Text(stringResource(R.string.main_settings), color = Color.White)
+                    }
                 }
             }
         }

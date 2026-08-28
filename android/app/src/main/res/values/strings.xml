@@ -38,4 +38,48 @@
     <string name="main_connecting">ブラウザを起動しています…</string>
     <string name="main_hint">戻るボタン: キーボード表示/非表示 ・ 通知の「終了」で閉じる</string>
     <string name="main_exited">ブラウザを終了しました</string>
+    <string name="main_settings">設定</string>
+
+    <string name="shortcut_settings">設定</string>
+    <string name="cancel">キャンセル</string>
+
+    <string name="tutorial_title">使い方</string>
+    <string name="tutorial_body">・戻るボタン: キーボードの表示/非表示\n・ホームに戻ってもブラウザは動き続けます\n・終了するには通知の「終了」を押します\n・倍率や操作方法は、アプリアイコン長押し →「設定」で変更できます</string>
+    <string name="tutorial_ok">はじめる</string>
+
+    <string name="settings_title">設定</string>
+    <string name="settings_note_next_session">倍率・タッチ・省メモリ等の変更は、次回のブラウザ起動から反映されます。</string>
+    <string name="settings_default_browser">既定のブラウザ</string>
+    <string name="settings_no_browser">セットアップ済みのブラウザがありません</string>
+    <string name="settings_scale">表示倍率</string>
+    <string name="settings_scale_auto">自動（%1$s 倍）</string>
+    <string name="settings_scale_manual">手動（%1$s 倍）</string>
+    <string name="settings_touch">タッチ操作</string>
+    <string name="touch_direct">直接タッチ（画面をそのまま触る）</string>
+    <string name="touch_touchpad">擬似タッチパッド</string>
+    <string name="touch_trackpad">トラックパッド（ポインタ操作）</string>
+    <string name="settings_behavior">動作</string>
+    <string name="settings_lowmem">省メモリモード</string>
+    <string name="settings_lowmem_desc">ブラウザのプロセス数を絞ってメモリを節約します</string>
+    <string name="settings_keepwarm">高速再起動</string>
+    <string name="settings_keepwarm_desc">終了後も画面表示サーバを残し、次回の起動を速くします</string>
+    <string name="settings_noseccomp">互換モード</string>
+    <string name="settings_noseccomp_desc">起動に失敗する端末向け（少し遅くなります）</string>
+    <string name="settings_homepage">ホームページ（空欄で既定）</string>
+    <string name="settings_browsers">ブラウザの管理</string>
+    <string name="settings_session_busy">ブラウザの実行中は更新・削除できません</string>
+    <string name="settings_add_browser">ブラウザを追加…</string>
+    <string name="settings_update">更新</string>
+    <string name="settings_updating">%1$s を更新中…</string>
+    <string name="settings_update_done">更新が完了しました</string>
+    <string name="settings_update_failed">更新に失敗しました (rc=%1$d)</string>
+    <string name="settings_delete">削除</string>
+    <string name="settings_deleting">削除中…</string>
+    <string name="settings_delete_confirm">%1$s を削除しますか？ ブラウザの設定とプロファイルも消えます。</string>
+    <string name="settings_delete_done">削除しました</string>
+    <string name="settings_export_downloads">ダウンロードの書き出し</string>
+    <string name="settings_export_desc">ブラウザでダウンロードしたファイルを、端末の共有フォルダへコピーします。</string>
+    <string name="settings_export_button">フォルダを選んで書き出す</string>
+    <string name="settings_exporting">書き出し中…</string>
+    <string name="settings_export_done">%1$d 個のファイルを書き出しました</string>
 </resources>

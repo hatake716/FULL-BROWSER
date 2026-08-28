@@ -44,6 +44,11 @@ class Prefs(context: Context) {
         get() = sp.getString("homepage", "") ?: ""
         set(v) = sp.edit().putString("homepage", v).apply()
 
+    /** 初回チュートリアル (戻るキー/通知の説明) を表示済みか */
+    var tutorialShown: Boolean
+        get() = sp.getBoolean("tutorial_shown", false)
+        set(v) = sp.edit().putBoolean("tutorial_shown", v).apply()
+
     /** 実際に使う倍率。自動なら 密度/160 を 0.25 刻みに丸め、1.0〜4.0 に収める。 */
     fun effectiveScale(): Float {
         if (scale > 0f) return scale

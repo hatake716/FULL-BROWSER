@@ -28,6 +28,7 @@ interface XServerController {
     fun isRunning(): Boolean
     fun openViewer(context: Context): Boolean
     fun closeViewer(context: Context)
+    fun viewerOpen(): Boolean
     fun socketFile(tmpDir: File): File = File(tmpDir, ".X11-unix/X$display")
 
     /** ソケットが現れるまで待つ (最大 timeoutMs) */
@@ -65,6 +66,11 @@ class LorieXServerController(private val context: Context, override val display:
             Log.i(App.TAG, "xserver: adopting live server pid=${state.pid}")
             return
         }
+        // 前回の X サーバが死んでいる場合、残ったソケット/ロックを awaitSocket が
+        // 「起動済み」と誤認しないよう、サービス起動前にここ (アプリプロセス) で消す
+        runCatching { socketFile(tmpDir).delete() }
+        runCatching { File(tmpDir, ".X$display-lock").delete() }
+        runCatching { File(context.filesDir, XServerService.STATE_FILE).delete() }
         val g = UUID.randomUUID().toString()
         generation = g
         val intent = Intent(context, XServerService::class.java).apply {
@@ -88,9 +94,12 @@ class LorieXServerController(private val context: Context, override val display:
 
     /** サービスに bind して Binder をビューアへ注入する。準備未完なら false */
     override fun openViewer(context: Context): Boolean {
-        val expected = generation ?: return false
-        val state = serviceState() ?: return false
-        if (state.generation != expected || !isPidAlive(state.pid)) return false
+        val expected = generation
+        if (expected == null) { Log.w(App.TAG, "openViewer: no generation"); return false }
+        val state = serviceState()
+        if (state == null) { Log.w(App.TAG, "openViewer: no service state file"); return false }
+        if (state.generation != expected) { Log.w(App.TAG, "openViewer: generation mismatch"); return false }
+        if (!isPidAlive(state.pid)) { Log.w(App.TAG, "openViewer: server pid ${state.pid} dead"); return false }
         val appContext = context.applicationContext
         lateinit var connection: ServiceConnection
         connection = object : ServiceConnection {
@@ -99,7 +108,10 @@ class LorieXServerController(private val context: Context, override val display:
                     val current = serviceState()
                     if (binder != null && binder.isBinderAlive && current?.generation == expected) {
                         runCatching { EmbeddedX11Display.connect(appContext, binder, expected) }
-                            .onFailure { Log.e(App.TAG, "xserver: viewer launch failed", it) }
+                            .onSuccess { Log.i(App.TAG, "openViewer: viewer connected") }
+                            .onFailure { Log.e(App.TAG, "openViewer: viewer launch failed", it) }
+                    } else {
+                        Log.w(App.TAG, "openViewer: stale binder/generation at connect")
                     }
                 } finally {
                     runCatching { appContext.unbindService(connection) }
@@ -109,13 +121,19 @@ class LorieXServerController(private val context: Context, override val display:
                 runCatching { appContext.unbindService(connection) }
             }
             override fun onNullBinding(name: ComponentName?) {
+                Log.w(App.TAG, "openViewer: null binding")
                 runCatching { appContext.unbindService(connection) }
             }
         }
-        return runCatching {
+        val ok = runCatching {
             appContext.bindService(Intent(appContext, XServerService::class.java), connection, 0)
         }.getOrDefault(false)
+        if (!ok) Log.w(App.TAG, "openViewer: bindService returned false")
+        return ok
     }
+
+    /** ビューアが表に出ているか (接続注入済みの Activity が生きているか) */
+    override fun viewerOpen(): Boolean = EmbeddedX11Display.isOpen()
 
     override fun closeViewer(context: Context) {
         runCatching { EmbeddedX11Display.close(context.applicationContext) }

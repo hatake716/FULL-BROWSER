@@ -58,7 +58,7 @@ class SetupActivity : ComponentActivity() {
         val preselect = Browser.byId(intent.getStringExtra(SessionService.EXTRA_BROWSER)) ?: Browser.FIREFOX
 
         setContent {
-            MaterialTheme {
+            FbTheme {   // ダークモード時に黒背景+黒文字にならないよう端末設定に追従する
                 var step by remember { mutableStateOf<Step>(Step.LoadingManifest) }
                 var selected by remember { mutableStateOf(preselect) }
                 var acceptChromeTerms by remember { mutableStateOf(false) }
@@ -98,6 +98,7 @@ class SetupActivity : ComponentActivity() {
                                 }
                             }
                             if (prefs.defaultBrowser == null || !rootfs.isBrowserReady(prefs.defaultBrowser!!)) prefs.defaultBrowser = selected
+                            Shortcuts.update(this@SetupActivity, rootfs)
                             step = Step.Done(selected)
                         } catch (e: RootfsManager.NotEnoughSpace) {
                             step = Step.Error(getString(R.string.setup_no_space, Formatter.formatShortFileSize(this@SetupActivity, e.neededBytes)), manifest)

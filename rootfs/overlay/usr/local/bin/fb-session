@@ -46,9 +46,10 @@ if [ ! -S "$SOCK" ]; then
   exit 65
 fi
 
-# --- DPI (倍率) と背景 ----------------------------------------------------------
-DPI="$(awk -v s="$FB_SCALE" 'BEGIN { d = 96 * s; if (d < 72) d = 72; printf "%d", d }')"
-printf 'Xft.dpi: %s\nXft.antialias: 1\nXft.hinting: 1\nXft.rgba: none\n' "$DPI" | xrdb -merge - 2>/dev/null || true
+# --- DPI と背景 -----------------------------------------------------------------
+# 倍率の適用点はブラウザ側フラグ (devPixelsPerPx / --force-device-scale-factor) の一本のみ。
+# Xft.dpi も 96×FB_SCALE にすると Firefox/Chromium が文字倍率を二重適用して巨大化する。
+printf 'Xft.dpi: 96\nXft.antialias: 1\nXft.hinting: 1\nXft.rgba: none\n' | xrdb -merge - 2>/dev/null || true
 xsetroot -solid '#000000' 2>/dev/null || true
 
 # --- ウィンドウマネージャ (装飾なし・常時最大化) ------------------------------------
