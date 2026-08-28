@@ -8,6 +8,19 @@
 
 ## 動作確認ログ
 
+### 2026-08-28 — 動画再生の計測と改善 (Pixel, Chrome, YouTube 1080p ページ)
+
+| 条件 | X 提示レート | ボトルネック |
+|---|---|---|
+| 描画解像度 100% | 19〜23 FPS | Chrome 表示合成プロセス (SW) が単核 84% で飽和。体感コマ送り |
+| 描画解像度 75% (新既定) | **79〜113 FPS** | 合成コスト約半減で解消。renderer 119%(デコード)・proot 57% |
+
+- メモリ: 7.7GB 端末で swap 3.4GB 使用を観測 → 省メモリ既定の閾値を 6GB→10GB に変更
+  (renderer-process-limit=3 / low-end-device-mode が有効になる)
+- 音声途切れ対策: 上記 CPU 改善 + FIFO を F_SETPIPE_SZ で 1MB に拡大
+- 今後の最適化候補: lorie の present が非同期フリーラン (112FPS) で合成 CPU を浪費 →
+  リフレッシュ同期のフレームキャップを入れれば合成プロセスの 80% をさらに削れる見込み
+
 ### 2026-08-28 — 初回 end-to-end 成功 (Pixel, debug 0.1.0, Firefox ESR)
 
 - セットアップ: manifest 取得 → 139MB DL → SHA-256 検証 → 614MB 展開、一発成功

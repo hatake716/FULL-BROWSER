@@ -44,6 +44,9 @@ class AudioBridge(private val fifo: File) {
         while (running) {
             try {
                 FileInputStream(fifo).use { input ->
+                    // FIFO の容量を広げてバッファリング耐性を上げる (F_SETPIPE_SZ=1031)。
+                    // 失敗しても既定 64KB で動くので握りつぶす
+                    runCatching { android.system.Os.fcntlInt(input.fd, 1031, 1 shl 20) }
                     val track = AudioTrack.Builder()
                         .setAudioAttributes(
                             AudioAttributes.Builder()

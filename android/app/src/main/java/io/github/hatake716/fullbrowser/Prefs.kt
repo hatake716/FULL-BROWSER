@@ -27,9 +27,10 @@ class Prefs(context: Context) {
         get() = sp.getInt("touch_mode", 3)
         set(v) = sp.edit().putInt("touch_mode", v).apply()
 
-    /** 既定値は端末 RAM に応じて自動 (6GB 未満なら省メモリ ON) */
+    /** 既定値は端末 RAM に応じて自動。実測ではブラウザ+Android で 8GB 級でも
+     *  スワップに深く入るため、余裕をもって 10GB 未満は省メモリ ON */
     var lowMemory: Boolean
-        get() = sp.getBoolean("low_memory", totalMemBytes < 6L * 1024 * 1024 * 1024)
+        get() = sp.getBoolean("low_memory", totalMemBytes < 10L * 1024 * 1024 * 1024)
         set(v) = sp.edit().putBoolean("low_memory", v).apply()
 
     var gpu: Boolean
@@ -46,9 +47,10 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("no_seccomp", false)
         set(v) = sp.edit().putBoolean("no_seccomp", v).apply()
 
-    /** 描画解像度の倍率 (1.0=等倍, 0.75, 0.5)。下げるとソフトウェア描画の負荷が大きく減る */
+    /** 描画解像度の倍率 (1.0=等倍, 0.75, 0.5)。下げるとソフトウェア描画の負荷が大きく減る。
+     *  既定 0.75: 実測で表示合成が単核飽和し動画がコマ送りになるため。高 DPI では見た目の差はごく小さい */
     var renderRes: Float
-        get() = sp.getFloat("render_res", 1.0f)
+        get() = sp.getFloat("render_res", 0.75f)
         set(v) = sp.edit().putFloat("render_res", v).apply()
 
     var homepage: String
