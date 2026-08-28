@@ -15,6 +15,7 @@
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
         android:extractNativeLibs="true"
+        android:networkSecurityConfig="@xml/network_security"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.DeviceDefault.NoActionBar"
         tools:ignore="MissingApplicationIcon,DataExtractionRules">

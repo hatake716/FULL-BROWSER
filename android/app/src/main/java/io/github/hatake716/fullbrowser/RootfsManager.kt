@@ -80,7 +80,16 @@ class RootfsManager(private val context: Context) {
 
     // ------------------------------------------------------------------ manifest
 
-    suspend fun fetchManifest(url: String = MANIFEST_URL): Manifest = withContext(Dispatchers.IO) {
+    /**
+     * manifest の取得先。開発時は `files/manifest-url.override` に URL を書けば差し替えられる
+     * (`adb shell run-as <pkg> sh -c 'echo http://127.0.0.1:8000/manifest.json > files/manifest-url.override'`)。
+     * アプリ専用領域なので第三者は書けない。
+     */
+    fun manifestUrl(): String =
+        File(filesDir, "manifest-url.override").takeIf { it.isFile }
+            ?.readText()?.trim()?.takeIf { it.isNotEmpty() } ?: MANIFEST_URL
+
+    suspend fun fetchManifest(url: String = manifestUrl()): Manifest = withContext(Dispatchers.IO) {
         val req = Request.Builder().url(url).build()
         http.newCall(req).execute().use { res ->
             if (!res.isSuccessful) throw IOException("manifest HTTP ${res.code}")

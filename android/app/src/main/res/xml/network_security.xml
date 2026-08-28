@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 既定は cleartext 禁止のまま、開発時の manifest-url.override 用に localhost だけ HTTP を許可する。
+     (adb reverse tcp:8000 tcp:8000 で PC のローカルサーバを 127.0.0.1:8000 として参照できる) -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">127.0.0.1</domain>
+    </domain-config>
+</network-security-config>
