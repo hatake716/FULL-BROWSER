@@ -55,13 +55,36 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val state by SessionService.state.collectAsState()
+            // Running になったらビューア (com.termux.x11.MainActivity + LorieView) を前面に出す。
+            // Binder 注入はサービス bind 経由 (LDFA 方式)。Activity が前面のここから呼ぶことで
+            // Android 10+ のバックグラウンド Activity 起動制限に掛からない。
+            androidx.compose.runtime.LaunchedEffect(state) {
+                if (state is SessionService.State.Running) {
+                    applyLorieViewerPrefs()
+                    SessionService.controller()?.openViewer(this@MainActivity)
+                }
+            }
             Box(Modifier.fillMaxSize().background(Color.Black)) {
-                // TODO(Phase 2): AndroidView(factory = { LorieView(it) }, modifier = Modifier.fillMaxSize())
-                //   lorie の preference を初期化: fullscreen=true, hideCutout=true, touchMode=prefs.touchMode,
-                //   Reseed=true, showAdditionalKbd=false, displayResolutionMode=native, clipboardEnable=true
                 StatusOverlay(state, onRestart = { SessionService.start(this@MainActivity, browser) })
             }
         }
+    }
+
+    /**
+     * lorie (ビューア) の設定を docs/ARCHITECTURE.md §4 の値で初期化する。
+     * lorie はプロセス既定の SharedPreferences ("<pkg>_preferences") を読む。
+     * touchMode は ListPreference なので文字列で書く。
+     */
+    private fun applyLorieViewerPrefs() {
+        getSharedPreferences("${packageName}_preferences", MODE_PRIVATE).edit()
+            .putBoolean("fullscreen", true)
+            .putBoolean("hideCutout", true)
+            .putString("touchMode", prefs.touchMode.toString())
+            .putBoolean("Reseed", true)
+            .putBoolean("showAdditionalKbd", false)
+            .putString("displayResolutionMode", "native")
+            .putBoolean("clipboardEnable", true)
+            .apply()
     }
 
     override fun onNewIntent(intent: Intent) {

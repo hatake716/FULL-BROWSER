@@ -44,5 +44,16 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Keeps a user-initiated desktop Linux browser session (proot) alive while the app is in the background, like a terminal emulator" />
         </service>
+
+        <!-- ネイティブ X サーバ (lorie)。Xorg はプロセス全域の状態を持つため専用プロセスでホストする -->
+        <service
+            android:name=".XServerService"
+            android:exported="false"
+            android:process=":x11"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Runs a local X11 display server in a dedicated process to render the user-initiated desktop Linux browser; no standard FGS type applies (no screen capture, no external device, no data sync)" />
+        </service>
     </application>
 </manifest>

@@ -3,6 +3,10 @@
 このリポジトリの v0.1.0 は「設計 + 骨格 + 検証済みの部品」です。以下の順で仕上げてください。
 各 Phase の終わりに実機（Pixel 10a）で確認し、結果を `docs/BENCHMARKS.md` に残します。
 
+> **2026-08-28 更新**: Phase 0 と Phase 2 のアプリ結線（1〜3, 5）が完了。debug APK がビルドでき、
+> 実機で起動確認済み（rootfs 未公開のため SetupActivity が manifest 404 を表示するところまで）。
+> 残りは Phase 1（rootfs ビルドと `rootfs-latest` リリース公開）→ Phase 2-4（実機での展開耐性テスト）→ Phase 3 以降。
+
 ## 既に出来ていること
 
 - rootfs ビルド一式（`rootfs/`）と CI（`.github/workflows/build-rootfs.yml`）。shellcheck 済み
@@ -10,17 +14,21 @@
 - proot の取得スクリプト `native/fetch-proot-from-termux.sh`（Termux 公式 .deb → jniLibs/assets）
 - Android: `ProotCommand`（argv/env 生成。単体テスト付き）、`RootfsManager`（manifest → DL → SHA-256 → tar.xz 展開）、
   `SessionService`、`BrowserCatalog`、`Prefs`、`SetupActivity`/`MainActivity` の骨格、Manifest、App Shortcuts、文言 (ja/en)
+- **X サーバ組み込み（済）**: `external/termux-x11`（LDFA パッチ入りコミット 50ac80fb のツリー同梱）を
+  `android/embedded-x11` モジュール（LDFA 由来の生成オーバーレイ）でビルドし `libXlorie.so` を APK に同梱。
+  全 .so が 16 KB ページ整列済みであることを確認
+- **X サーバ起動方式（重要な設計変更）**: 当初案の app_process + CLASSPATH は **不採用**。
+  LDFA が Android 17 で app_process 起動の失敗を踏んで v0.8 から移行した実績ある方式に合わせ、
+  `XServerService`（`android:process=":x11"` の FGS）内で JNI ブリッジ `EmbeddedX11ServerBridge.start([":0","-noreset"])` を呼ぶ。
+  ビューアは上流の `com.termux.x11.MainActivity` + LorieView をそのまま使い、
+  `XServerController.openViewer()` が bind → Binder を `EmbeddedX11Display.connect()` で注入して起動する
 
-## Phase 0 — 前提確認（半日）
+## Phase 0 — 前提確認（済 2026-08-28）
 
-1. `native/fetch-proot-from-termux.sh android/app` を実行し、`android/app/src/main/jniLibs/arm64-v8a/libproot.so` と `libloader.so`、
-   `android/app/src/main/assets/proot/` が出来ること
-2. `git submodule add https://github.com/termux/termux-x11 external/termux-x11`。LDFA で行った lorie 組み込み（LorieView + CmdEntryPoint）を
-   `android/app` から参照できる形にする。方針は 2 択:
-   - (a) `external/termux-x11/lorie` を **library module** 化して `:app` から依存（applicationId は :app 側）
-   - (b) LDFA と同様に必要ソースを `android/app` 配下へコピー（ライセンス表示を保持）
-   どちらでも `com.termux.x11.CmdEntryPoint` と `LorieView` が使えればよい
-3. `android/` で `./gradlew :app:testDebugUnitTest` が通る（ProotCommandTest）
+1. ✅ `native/fetch-proot-from-termux.sh android/app` 実行済み（proot 5.1.107.92、PROOT_LOADER 対応、16KB 整列確認）
+2. ✅ lorie 組み込み完了。submodule ではなく **ツリー同梱**（`external/termux-x11`）+ `:embedded-x11` モジュール方式。
+   LDFA のパッチコミット 50ac80fb は upstream に存在しないため submodule 化は不可（THIRD_PARTY_NOTICES.md 参照）
+3. ✅ `./gradlew :app:testDebugUnitTest` パス、`./gradlew :app:assembleDebug` 成功（APK 約 40 MB / debug）
 
 ## Phase 1 — rootfs を端末で動かす（1 日）
 
@@ -38,13 +46,16 @@
 3. 確認: 全画面になる／回転で追従する／Gboard で日本語が打てる／`fb-session` 終了で戻る／`/proc/stat` を読むツールが落ちない
 4. Chromium, chromebase（`fb-install-chrome` を実行してから）も同様に
 
-## Phase 2 — アプリ結線（2–3 日）
+## Phase 2 — アプリ結線（1〜3, 5 済 2026-08-28）
 
-1. `XServerController.kt` の TODO を lorie の実装で埋める（`app_process` 起動、`TMPDIR`/`XKB_CONFIG_ROOT`/`CLASSPATH`、LorieView の接続）
-2. `MainActivity` に LorieView を置き、immersive + cutout 設定。lorie の preference を §ARCHITECTURE 4 の値で初期化
-3. `SessionService` の実装を `ProotCommand` + `XServerController` で完成。通知の「終了」アクション
-4. `RootfsManager` の展開を実機で 3 回連続成功させる（途中キャンセル → 再開も）
-5. DNS: `ConnectivityManager.getLinkProperties().dnsServers` を resolv.conf へ。Private DNS 有効時は 1.1.1.1 をフォールバック
+1. ✅ `XServerService`（:x11 プロセスの FGS、`EmbeddedX11ServerBridge` 経由で Xorg 起動、TMPDIR=`<rootfs>/tmp`、
+   XKB_CONFIG_ROOT=`<rootfs>/usr/share/X11/xkb`、ソケット/ロックの後始末付き）+ `XServerController` 書き換え
+2. ✅ ビューアは LorieView 内蔵ではなく上流 `com.termux.x11.MainActivity` を使用（LDFA 方式）。
+   `MainActivity` が Running 遷移時に lorie preference（`<pkg>_preferences`）を §ARCHITECTURE 4 の値で初期化して
+   `openViewer()` を呼ぶ。immersive + cutout は両 Activity で設定済み
+3. ✅ `SessionService` 完成（X 起動 → awaitSocket → proot → 終了時にビューアを閉じ keepWarm 判定）。通知の「終了」あり
+4. `RootfsManager` の展開を実機で 3 回連続成功させる（途中キャンセル → 再開も）← **未・Phase 1 の rootfs 公開後に**
+5. ✅ DNS: 実装済み（`RootfsManager.resolvConf()`）。Private DNS 有効時のフォールバック 1.1.1.1 も込み
 
 ## Phase 3 — 導線と設定（1–2 日）
 
@@ -61,8 +72,8 @@
 
 | # | 項目 | 影響 | 確認方法 |
 |---|---|---|---|
-| 1 | targetSdk 35+ で jniLibs の `libproot.so` を `ProcessBuilder` で直接実行できるか（`extractNativeLibs`）。不可なら `/system/bin/linker64 <path>` 経由 | 起動不可 | Phase 2 冒頭で確認 |
-| 2 | lorie の `CmdEntryPoint` を自アプリの APK から `app_process` で起動する際の `CLASSPATH` と SELinux（LDFA では動作実績あり） | 画面が出ない | LDFA のコードを参照 |
+| 1 | targetSdk 35+ で jniLibs の `libproot.so` を `ProcessBuilder` で直接実行できるか（`extractNativeLibs`）。不可なら `/system/bin/linker64 <path>` 経由。LDFA-fix は同方式 (targetSdk 35) で動作実績あり | 起動不可 | Phase 1 の rootfs で初回セッション時 |
+| 2 | ~~app_process の CLASSPATH と SELinux~~ → **解消**: :x11 サービス + JNI ブリッジ方式に変更したため app_process は使わない (2026-08-28) | — | — |
 | 3 | Direct touch (touchMode=3) で Firefox/Chromium のタッチスクロールが効くか。効かなければ既定を 2 に | 操作性 | Phase 1 |
 | 4 | Debian trixie の Chromium が `--no-sandbox` 単独で起動するか（`chromium-sandbox` 不要のはず） | Chromium 起動不可 | Phase 1 |
 | 5 | Firefox ESR の sandbox 無効化 env が proot 内で十分か（`MOZ_DISABLE_*_SANDBOX`） | Firefox 起動不可 | Phase 1 |

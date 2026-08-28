@@ -124,6 +124,7 @@ class SessionService : Service() {
         } finally {
             proot = null
             releaseWakeLock()
+            xserver?.closeViewer(this)   // ブラウザ終了 → ビューアを閉じて MainActivity に戻す
             if (!prefs.keepWarm) xserver?.stop()
             ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
             stopSelf()
@@ -161,8 +162,11 @@ class SessionService : Service() {
         private val _state = MutableStateFlow<State>(State.Idle)
         val state: StateFlow<State> = _state
 
-        /** X サーバはアプリプロセスの子。keepWarm のためサービスより長生きさせる */
+        /** X サーバは :x11 プロセスの FGS。keepWarm のためセッションより長生きさせる */
         @Volatile private var xserver: XServerController? = null
+
+        /** ビューア接続 (openViewer) を前面の Activity から呼ぶための参照 */
+        fun controller(): XServerController? = xserver
 
         fun start(context: Context, browser: Browser) {
             context.startForegroundService(

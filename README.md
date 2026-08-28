@@ -95,7 +95,8 @@ proot のオーバーヘッドを差し引いても体感で困らないよう�
 docs/            設計・Play 対応・性能・引き継ぎ・代替案
 rootfs/          rootfs ビルド (mmdebstrap) と、rootfs に焼き込むゲスト側ファイル (overlay/)
 native/          proot の取得/ビルド手順（Termux の公式 .deb から抽出、または静的ビルド）
-android/         Android アプリ (Kotlin)。X サーバは external/termux-x11 (submodule) の lorie を組み込む
+android/         Android アプリ (Kotlin)。X サーバは external/termux-x11 の lorie を :embedded-x11 が組み込む
+external/        termux-x11 のツリー同梱 (LDFA パッチ入りコミット 50ac80fb。THIRD_PARTY_NOTICES.md 参照)
 .github/         CI: rootfs ビルド・proot 取得・shellcheck
 scripts/         ローカル検証 (scripts/check.sh)
 ```
@@ -110,10 +111,12 @@ rootfs/build-rootfs.sh firefox out/     # base | firefox | chromium | chromebase
 # 2) proot（Termux 公式パッケージから抽出 → android/app/src/main/jniLibs と assets に配置）
 native/fetch-proot-from-termux.sh android/app
 
-# 3) Android
-git submodule update --init          # external/termux-x11
+# 3) Android（external/termux-x11 はツリー同梱済み。submodule 取得は不要）
 cd android && ./gradlew :app:assembleDebug
 ```
+
+必要環境: JDK 17、Android SDK (compileSdk 36) + NDK 29.0.14206865、CMake、python3、bison、patch
+（lorie の Xorg 一式をソースからビルドするため）。
 
 ### 状態と次の作業
 

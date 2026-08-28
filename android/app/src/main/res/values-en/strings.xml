@@ -33,6 +33,7 @@
     <string name="notif_channel">Browser session</string>
     <string name="notif_running">%1$s is running</string>
     <string name="notif_stop">Stop</string>
+    <string name="notif_xserver">Display server is running</string>
 
     <string name="main_connecting">Starting the browser…</string>
     <string name="main_hint">Back button: show/hide keyboard · Stop from the notification</string>

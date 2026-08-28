@@ -52,6 +52,6 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.commons.compress)
     implementation(libs.xz)
-    // implementation(project(":lorie"))   // X サーバ (docs/HANDOVER.md Phase 0)
+    implementation(project(":embedded-x11"))   // X サーバ (Termux:X11 lorie / libXlorie.so)
     testImplementation(libs.junit)
 }

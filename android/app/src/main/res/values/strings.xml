@@ -33,6 +33,7 @@
     <string name="notif_channel">ブラウザセッション</string>
     <string name="notif_running">%1$s を実行中</string>
     <string name="notif_stop">終了</string>
+    <string name="notif_xserver">画面表示サーバを実行中</string>
 
     <string name="main_connecting">ブラウザを起動しています…</string>
     <string name="main_hint">戻るボタン: キーボード表示/非表示 ・ 通知の「終了」で閉じる</string>
