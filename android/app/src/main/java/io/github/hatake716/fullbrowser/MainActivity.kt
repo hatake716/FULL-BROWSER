@@ -142,7 +142,7 @@ class MainActivity : ComponentActivity() {
             .putString("displayResolutionMode", "native")
             .putBoolean("clipboardEnable", true)
             // 戻るボタン → 設定画面 ("open preferences" はパッチで SettingsActivity に差し替え済み)。
-            // 従来の戻る=キーボードは 3 本指の上スワイプに移設
+            // キーボードは通知の「キーボード」ボタン (ACTION_CUSTOM what=swipeUp) と 3 本指上スワイプ
             .putString("backButtonAction", "open preferences")
             .putString("swipeUpAction", "toggle soft keyboard")
             .apply()

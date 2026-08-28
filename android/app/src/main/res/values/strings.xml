@@ -32,11 +32,12 @@
 
     <string name="notif_channel">ブラウザセッション</string>
     <string name="notif_running">%1$s を実行中</string>
+    <string name="notif_keyboard">キーボード</string>
     <string name="notif_stop">終了</string>
     <string name="notif_xserver">画面表示サーバを実行中</string>
 
     <string name="main_connecting">ブラウザを起動しています…</string>
-    <string name="main_hint">戻るボタン: 設定 ・ 3本指で上スワイプ: キーボード ・ 通知の「終了」で閉じる</string>
+    <string name="main_hint">戻る: 設定 ・ キーボード: 通知ボタン or 3本指で上スワイプ</string>
     <string name="main_exited">ブラウザを終了しました</string>
     <string name="main_settings">設定</string>
 
@@ -44,7 +45,7 @@
     <string name="cancel">キャンセル</string>
 
     <string name="tutorial_title">使い方</string>
-    <string name="tutorial_body">・戻るボタン: 設定画面を開く\n・3本指で上にスワイプ: キーボードの表示/非表示\n・ホームに戻ってもブラウザは動き続けます\n・終了するには通知の「終了」を押します</string>
+    <string name="tutorial_body">・戻るボタン: 設定画面を開く\n・キーボード: 通知の「キーボード」ボタン（3本指で上スワイプでも可）\n・ホームに戻ってもブラウザは動き続けます\n・終了するには通知の「終了」を押します</string>
     <string name="tutorial_ok">はじめる</string>
 
     <string name="settings_title">設定</string>

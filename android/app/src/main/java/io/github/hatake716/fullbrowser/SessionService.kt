@@ -97,11 +97,20 @@ class SessionService : Service() {
             this, 1, Intent(this, SessionService::class.java).setAction(ACTION_STOP),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
+        // ソフトキーボードの表示/非表示。ビューア (lorie) の ACTION_CUSTOM broadcast は
+        // NOT_EXPORTED だが、自アプリの PendingIntent なので届く。通知タップは画面を
+        // 切り替えないため、前面のビューアに対して IME をトグルできる
+        val keyboard = PendingIntent.getBroadcast(
+            this, 2,
+            Intent("com.termux.x11.ACTION_CUSTOM").setPackage(packageName).putExtra("what", "swipeUp"),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
         return NotificationCompat.Builder(this, App.CHANNEL_SESSION)
             .setSmallIcon(android.R.drawable.ic_menu_compass)
             .setContentTitle(getString(R.string.notif_running, getString(browser.labelRes)))
             .setContentText(getString(R.string.main_hint))
             .setContentIntent(open)
+            .addAction(0, getString(R.string.notif_keyboard), keyboard)
             .addAction(0, getString(R.string.notif_stop), stop)
             .setOngoing(true)
             .setSilent(true)
