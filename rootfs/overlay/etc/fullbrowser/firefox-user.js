@@ -8,6 +8,12 @@ user_pref("browser.sessionhistory.max_total_viewers", 1);
 user_pref("browser.aboutConfig.showWarning", false);
 user_pref("app.update.auto", false);
 user_pref("app.update.enabled", false);
+// --- 動画: SW デコード前提なので重いコーデックを避け、YouTube 等に H.264 を配信させる ---
+// (AV1/VP9 の SW デコードは H.264 の 2〜3 倍重い。H.264 は最大 1080p だが実用上十分)
+user_pref("media.av1.enabled", false);
+user_pref("media.mediasource.vp9.enabled", false);
+user_pref("media.webm.enabled", true);
+
 // --- 描画: GPU なし前提。SWGL (ソフトウェア WebRender) が最速 ---
 user_pref("gfx.webrender.software", true);
 user_pref("layers.acceleration.disabled", true);

@@ -18,8 +18,14 @@
 - メモリ: 7.7GB 端末で swap 3.4GB 使用を観測 → 省メモリ既定の閾値を 6GB→10GB に変更
   (renderer-process-limit=3 / low-end-device-mode が有効になる)
 - 音声途切れ対策: 上記 CPU 改善 + FIFO を F_SETPIPE_SZ で 1MB に拡大
-- 今後の最適化候補: lorie の present が非同期フリーラン (112FPS) で合成 CPU を浪費 →
-  リフレッシュ同期のフレームキャップを入れれば合成プロセスの 80% をさらに削れる見込み
+- present フレームキャップ (60fps) を実装 → 提示 57-59FPS に整定、合成 CPU を削減
+- 音声が全く出なくなる回帰の原因は FIFO の inode 競合 (ゲストが rm→mkfifo で作り直し、
+  先に open してブロックしていた読み手が孤児化)。FIFO 作成を Android 側
+  (prepareForSession, Os.mkfifo) に移して解決
+- コーデック別の実測: H.264 1080p30 → 32FPS (フルレート再生 ✓)。
+  YouTube「Big Buck Bunny 60fps 4K」(AV1/VP9 4K60) → SW デコード不能でコマ送り
+  (これはどの端末でも SW では無理)。Firefox は media.av1/vp9 無効化で
+  YouTube に H.264 を配信させるよう設定。Chrome は手動で画質を下げる運用
 
 ### 2026-08-28 — 初回 end-to-end 成功 (Pixel, debug 0.1.0, Firefox ESR)
 

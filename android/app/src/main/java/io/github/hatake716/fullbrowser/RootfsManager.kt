@@ -261,6 +261,14 @@ class RootfsManager(private val context: Context) {
         val r = rootfsDir(variant)
         tmpDir.mkdirs(); File(tmpDir, "l2s").mkdirs()
         File(r, "tmp/.shm").mkdirs(); File(r, "tmp/.X11-unix").mkdirs()
+        // 音声 FIFO はここ (Android 側) で作る。ゲストが作り直すと、先に open して
+        // ブロックしている読み手が削除済み inode に取り残される競合が起きる
+        val fifo = File(r, "tmp/.fb-audio")
+        val isFifo = runCatching { android.system.OsConstants.S_ISFIFO(android.system.Os.stat(fifo.path).st_mode) }.getOrDefault(false)
+        if (!isFifo) {
+            fifo.delete()
+            runCatching { android.system.Os.mkfifo(fifo.path, "666".toInt(8)) }
+        }
         File(r, "root/.config/fullbrowser").mkdirs()
         File(r, "root/.config/fullbrowser/env").writeText(prefs.guestEnvFile())
         File(r, "etc/resolv.conf").writeText(resolvConf())

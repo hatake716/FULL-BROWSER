@@ -64,7 +64,7 @@ fi
 # を FIFO /tmp/.fb-audio へ書き、Android 側 (AudioBridge) がそれを読んで再生する
 PA_PID=""
 if command -v pulseaudio >/dev/null; then
-  rm -f /tmp/.fb-audio /tmp/.fb-pulse
+  rm -f /tmp/.fb-pulse   # .fb-audio は Android 側が mkfifo 済み (inode を安定させ読み手の孤児化を防ぐ)
   export PULSE_RUNTIME_PATH=/tmp/.fb-pa
   mkdir -p "$PULSE_RUNTIME_PATH"
   pulseaudio -n --daemonize=no --exit-idle-time=-1 --disable-shm=true \

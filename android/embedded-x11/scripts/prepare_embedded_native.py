@@ -503,6 +503,23 @@ enum LdfaRendererInitState {
 // do not live in lorie_shared_server_state: renderedFrames is a rolling FPS counter.
 static volatile int ldfaRendererInitState = LDFA_RENDERER_STOPPED;
 static volatile uint64_t ldfaSuccessfulPresentSerial = 0;
+
+// FULL-BROWSER: present を ~60fps に制限する。SW 合成のブラウザはダメージを
+// 無制限に流し込み、キャップなしだと合成/present だけで 1 コアを浪費する
+#include <time.h>
+static void fbThrottlePresent(void) {
+    static struct timespec fbLast = {0, 0};
+    const long fbMinIntervalNs = 16000000L;
+    struct timespec fbNow;
+    clock_gettime(CLOCK_MONOTONIC, &fbNow);
+    long fbElapsed = (fbNow.tv_sec - fbLast.tv_sec) * 1000000000L + (fbNow.tv_nsec - fbLast.tv_nsec);
+    if (fbLast.tv_sec != 0 && fbElapsed > 0 && fbElapsed < fbMinIntervalNs) {
+        struct timespec fbTs = {0, fbMinIntervalNs - fbElapsed};
+        nanosleep(&fbTs, nullptr);
+        clock_gettime(CLOCK_MONOTONIC, &fbNow);
+    }
+    fbLast = fbNow;
+}
 // Bound a stalled vendor GPU fence below Android's ANR window. A frame that cannot finish within
 // one second is already unusable and transitions the renderer to FAILED.
 static const EGLTimeKHR LDFA_GPU_FENCE_TIMEOUT_NS = 1000000000ULL;
@@ -1381,6 +1398,38 @@ renderer = replace_once(
 ''',
     "renderer thread-affine teardown",
 )
+
+# FULL-BROWSER: present のフレームキャップ (両 swap 箇所の直前)
+renderer = replace_once(
+    renderer,
+    """    if (stopping.load(std::memory_order_acquire))
+        return;
+
+    EGLBoolean presented = eglSwapBuffers(egl_display, sfc);
+    if (presented != EGL_TRUE) {
+        printEglError("Failed to swap buffers", __LINE__);
+        ldfaMarkRendererFailed(this, "eglSwapBuffers");
+    } else {
+        __atomic_add_fetch(&ldfaSuccessfulPresentSerial, 1, __ATOMIC_RELEASE);
+        state->renderedFrames++;
+    }
+""",
+    """    if (stopping.load(std::memory_order_acquire))
+        return;
+
+    fbThrottlePresent();
+    EGLBoolean presented = eglSwapBuffers(egl_display, sfc);
+    if (presented != EGL_TRUE) {
+        printEglError("Failed to swap buffers", __LINE__);
+        ldfaMarkRendererFailed(this, "eglSwapBuffers");
+    } else {
+        __atomic_add_fetch(&ldfaSuccessfulPresentSerial, 1, __ATOMIC_RELEASE);
+        state->renderedFrames++;
+    }
+""",
+    "FULL-BROWSER present cap (main swap)",
+)
+
 (output / "renderer.cpp").write_text(renderer, encoding="utf-8")
 
 
